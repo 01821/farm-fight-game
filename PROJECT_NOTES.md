@@ -11,9 +11,8 @@
 | 项目名 | `farmAndFightGame` |
 | 引擎 | **Godot 4.7.1-stable**（Windows 版，`E:/godot/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64.exe`） |
 | 主场景 | `res://Scenes/base_level.tscn`（`uid://btccb47s76sxj`） |
-| 自动加载 | `Level` → `res://Scripts/Global/Level.gd`（缓存 `level/animalRegion2D` 供动物导航使用） |
+| 自动加载 | `Level` → `res://Scripts/Global/Level.gd`（缓存 `level/animalRegion2D` 供动物导航） |
 | 渲染 | Forward Plus；Windows 驱动 `d3d12` |
-| 物理 | 3D 引擎设成了 Jolt —— **当前项目是纯 2D，这项无意义** |
 | 像素风 | 视口 400×300，窗口 1600×1200；`canvas_items` + `expand` + `integer` 缩放；纹理过滤 = nearest |
 | 版本控制 | git，`main` 分支；远程 `origin` = https://github.com/01821/farm-fight-game.git（**公开仓库**）；`.godot/`、`/android/` 已忽略 |
 
@@ -29,15 +28,17 @@ Scenes/                                   所有场景，按类型分子目录
   character/player.tscn
   animals/base_animal.tscn
   plants/{base_plant,tree_1,tree_2,tree_3}.tscn
-  buildings/{house,water_bucket,water_container}.tscn
+  buildings/{house,water_bucket,water_container}.tscn   house = 商店
 Scripts/
   Global/Level.gd                         自动加载单例
   Characters/{character,player,base_animal}.gd
   State/{State,state_machine}.gd          状态机基础设施
   State/{Player,animal}/{idle,move}.gd    具体状态
   plants/base_plant.gd                    作物：浇水驱动生长
-  TileMap/land.gd                         耕地层：播种 / 浇水 / 收获
+  TileMap/land.gd                         class_name FarmLand：播种/浇水/收获规则
   buildings/water_source.gd               水源：靠近自动补水
+  buildings/market.gd                     class_name Market：商店买卖
+  Interaction/farm_controller.gd          class_name FarmController：动作键分发中心
   UI/hud.gd                               左上角状态栏
 Tests/                                    一次性自测场景（开发用，见第 9 节）
 ```
@@ -51,16 +52,15 @@ Tests/                                    一次性自测场景（开发用，�
 | 动作 | 键 | 用途 |
 |---|---|---|
 | `up` / `down` / `left` / `right` | W / S / A / D | 移动 |
-| `plant` | P | 在当前格播种 |
-| `water` | F | 给当前格的作物浇水 |
-| `harvest` | E | 收获当前格成熟作物 |
+| `cycle_item` | **Q** | 切换手持道具 |
+| `use_item` | **F** | 使用手持道具（唯一动作键） |
 
 **2D 物理层命名**
 
 | 层 | 名字 | 谁在用 |
 |---|---|---|
 | 1 | Static | 地形碰撞、树的 TileSet 多边形 |
-| 2 | Player | 玩家（水源 Area2D 的 mask 就是这层） |
+| 2 | Player | 玩家（水源 / 商店的 Area2D 的 mask 都是这层） |
 | 3 | Animal | 动物 |
 | 4 | Plant | 作物 |
 
@@ -72,25 +72,26 @@ Tests/                                    一次性自测场景（开发用，�
 
 ```
 baseLevel (Node2D)
-├── background (Sprite2D)          img_white.png 拉伸成底色
-├── Sample (Sprite2D)              kenney_tiny-farm 的 sample.png，视觉参考
-├── Grass (TileMapLayer)           图集 = kenney_tiny-town/tilemap_packed.png
-├── Land (TileMapLayer)            图集 = kenney_tiny-farm/tilemap_packed.png
-│      script = land.gd
-│      terrain_set 0: terrain 0 = 耕地（浇水/种植都要求 terrain 0）
+├── background / Sample (Sprite2D)      底色 与 素材参考图
+├── Grass (TileMapLayer)                图集 = kenney_tiny-town
+├── Land (TileMapLayer)                 图集 = kenney_tiny-farm  →  script = land.gd (FarmLand)
+│      terrain_set 0: terrain 0 = 耕地（种植/浇水都要求 terrain 0）
 │      physics_layer_0/collision_layer = 1 (Static)
 │      group: navigation_polygon_source_geometry_group
-├── HUD (CanvasLayer)              script = hud.gd
-│   ├── Backdrop (ColorRect)       半透明黑底
-│   ├── InfoLabel (Label)          水/种子/收成/金币
-│   └── HintLabel (Label)          按键提示
+├── HUD (CanvasLayer)                   script = hud.gd
+│   ├── Backdrop (ColorRect)
+│   ├── InfoLabel (Label)               Gold / Seeds / Crops / Water
+│   └── HeldLabel (Label)               [Q] switch  [F] use  holding: XXX
+├── FarmController (Node)               script = farm_controller.gd ← F 键分发中心
 └── level (Node2D, y_sort)
     ├── Static (Node2D, y_sort)
-    │   ├── Trees/                100+ 个 tree_1.tscn 实例
-    │   ├── Plants/               ← 运行时种植的作物挂在这里（初始为空）
-    │   ├── house, waterBucket, WaterContainer   后两者是水源
-    ├── Animals/                  base_animal.tscn 实例（1 只）
-    ├── Player                    player.tscn 实例
+    │   ├── Trees/                      100+ 个 tree_1.tscn 实例
+    │   ├── Plants/                     ← 运行时种植的作物挂在这里（初始为空）
+    │   ├── Market                      ← house.tscn 实例，带 Area2D，是商店
+    │   ├── waterBucket                 ← 水源（Area2D）
+    │   └── WaterContainer              ← 水源（Area2D）
+    ├── Animals/                        base_animal.tscn 实例（1 只）
+    ├── Player                          player.tscn 实例
     └── animalRegion2D (NavigationRegion2D)   group: animalRegion
 ```
 
@@ -102,7 +103,7 @@ baseLevel (Node2D)
 
 ```
 Character (CharacterBody2D)      Scripts/Characters/character.gd
-├── Player       class_name Player      移动输入 + 农场状态
+├── Player       class_name Player      移动输入 + 农场状态 + 手持道具
 └── base_animal.gd  extends Character   持有 move_timer
 
 子节点结构（player.tscn / base_animal.tscn 都一样）：
@@ -116,24 +117,52 @@ Character (CharacterBody2D)      Scripts/Characters/character.gd
 > ⚠️ **三个名字必须一模一样**：`StateMachine` 下的节点名 == `SwitchTo()` 的字符串 == `AnimationPlayer` 里的动画名。
 > 因为 `Character.UpdateAnimation()` 直接 `play(state_machine.currentState.name)`。新增状态时三处一起加。
 
-### 农场循环（当前的核心玩法）
+### 手持道具模型（核心交互设计）
 
-规则（全部在 `land.gd` 的 `try_*_at()` 里，可被测试直接调用）：
+玩家手上永远只有一样东西，`Q` 循环切换：
 
-1. **播种**：站在耕地格按 `P`。要求 terrain 0、该格没种过、`player.seeds > 0`。扣 1 粒种子，实例化 `base_plant.tscn` 挂到 `level/Static/Plants`。
+| 手持 | 说明 |
+|---|---|
+| `Player.Item.SEED` | 种子袋 |
+| `Player.Item.WATER_CAN` | 水壶（还有 `water_left` 水量，容量 5） |
+| `Player.Item.BASKET` | 收获篮（`player.harvested` 就是篮子里的作物数） |
+
+**只有一个动作键 `F`**，效果由「手持道具 + 所在位置」决定，全部逻辑在 `FarmController.use_held_item()`：
+
+| 手持 | 位置 | F 的效果 |
+|---|---|---|
+| 种子袋 | 耕地格 | 播种（扣 1 种子） |
+| 种子袋 | 商店范围内 | 买 1 粒种子（扣 3 金） |
+| 水壶 | 有作物的格 | 浇水（扣 1 水） |
+| 水壶 | 商店范围内 | 无效，提示 |
+| 收获篮 | 成熟作物格 | 收获（作物进篮子） |
+| 收获篮 | 商店范围内 | 卖掉篮子里全部作物（每个 +5 金） |
+
+> 注意 **商店优先**：站在商店范围内即使脚下是耕地，也走交易而不是播种。
+
+### 农场循环规则
+
+1. **播种**要求 terrain 0 的耕地、该格没种过、`player.seeds > 0`。作物实例化后挂到 `level/Static/Plants`。
 2. **种下后不会自己生长**。
-3. **浇水**：按 `F`。要求该格有作物、未成熟、水壶有水。`plant.water()` 成功则扣 1 点水，该格出现蓝色湿痕。
-4. **生长**：浇水后 `growTime`（默认 3 秒）升 **一级**，然后**自动变干**——下一级要再浇一次。
-5. **成熟**：`growStage` 到 4 即为成熟（`is_mature()`），不能再浇。
-6. **收获**：按 `E`，作物销毁，`player.harvested += 1`，格子空出可重种。
-7. **补水**：站进水源（waterBucket / WaterContainer）的 `InteractionArea`，水壶自动补满（容量 `Player.WATER_CAPACITY = 5`），此时水源的 `ActiveSprite` 显示出来作为提示。
+3. **浇水**后该格出现蓝色湿痕（`WetMark`）。
+4. `growTime`（默认 3 秒）后升 **一级** 并**自动变干**——下一级要再浇一次。
+5. `growStage` 到 4 即成熟（`is_mature()`），不能再浇。
+6. **收获**后作物销毁，格子空出可重种。
 
-玩家初始状态：`money = 20`、`seeds = 8`、`harvested = 0`、`water_left = 0`。
+### 经济
+
+| 项 | 值 |
+|---|---|
+| 初始金币 / 种子 | 20 / 8 |
+| 种子售价 | 3 金 |
+| 作物收购价 | 5 金 |
+
+一个作物净赚 2 金。金币不够时买种子会被拒。
 
 ### 数据流
 
-- 作物状态（阶段/是否浇过水）**归作物自己管**，`land.gd` 只持有 `plants: Dictionary[Vector2i -> BasePlant]`。
-- 玩家状态（水/种子/收成/钱）归 `Player`。
+- 作物状态（阶段 / 是否浇过水）**归作物自己管**，`FarmLand` 只持有 `plants: Dictionary[Vector2i -> BasePlant]`。
+- 玩家状态（手持物 / 水 / 种子 / 收成 / 钱）归 `Player`。
 - HUD 每帧直接读 `Player`，不用信号同步。
 
 ---
@@ -164,12 +193,13 @@ Character (CharacterBody2D)      Scripts/Characters/character.gd
   命令：`godot --headless --path . --import`
 - **不要手写 UID**：`.tscn`/`.tres` 里的 `uid://` 由编辑器生成。**但 `ext_resource` 不带 `uid` 也能正常加载**（已实测），所以手工建场景时可以只写 `path`。
 - ⚠️ 每个脚本旁边有个同名 `.uid` 文件（Godot 4.4+），**它属于版本控制，别忽略**。
-  移动 / 重命名 / 删除脚本时，**必须连 `.uid` 一起处理**，否则会留下孤儿文件（已经踩过一次：`Scripts/_test_plant.gd.uid`）。
+  移动 / 重命名 / 删除脚本时，**必须连 `.uid` 一起处理**，否则会留下孤儿文件（已踩过）。
 - 节点上的 `unique_id=` 是较新引擎的字段，**手工新增节点时可以省略**（已实测可加载）。
 - 所有文本文件是 **LF**，`.gitattributes` 有 `* text=auto eol=lf`，别改成 CRLF。
 - ⚠️ **Godot 内置字体不含中文字形**（已用 `ThemeDB.fallback_font.has_char("水")` 实测 = false）。
-  所以 HUD/`debugLabel` 等 Label **不能用中文**，会渲染成方块。要中文必须往项目里放一个 CJK 字体（如思源黑体/Noto Sans SC）。
-- ⚠️ `land.gd` 里节点路径是写死的 `$"../level/Player"`、`$"../level/Static/Plants"` —— **动 `base_level` 层级就会崩**。
+  HUD/`debugLabel` 等 Label **不能用中文**，会渲染成方块。要中文必须往项目里放一个 CJK 字体。
+- ⚠️ `land.gd` 里节点路径是写死的 `$"../level/Player"`、`$"../level/Static/Plants"`；
+  `farm_controller.gd` 写死了 `$"../level/Static/Market"` —— **动 `base_level` 层级就会崩**。
 - `character.gd` 里的 `go()` / `dieOnCompany()` 和恒为 `false` 的 `workToAdd` 是**占位玩笑代码，不是真逻辑**。
 - `game.tscn` 是空壳；`tree_2.tscn` / `tree_3.tscn` 没被任何场景引用。
 - 动物状态里 `speed` 在 `Update()` 每帧重新随机（`randi_range`）—— 速度一直在抖，疑似写错位置。
@@ -181,17 +211,17 @@ Character (CharacterBody2D)      Scripts/Characters/character.gd
 **已能玩**
 - 玩家 WASD 移动 + Idle/Move 状态切换 + 动画
 - 动物 Idle/Move + `NavigationAgent2D` 随机漫游
-- **完整农场循环：播种 → 浇水 → 逐级生长 → 成熟 → 收获 → 计数**
+- **手持道具系统**：Q 切换 种子袋 / 水壶 / 收获篮，HUD 实时显示
+- **完整农场循环**：播种 → 浇水 → 逐级生长 → 成熟 → 收获
+- **经济循环**：在商店（房子）里拿篮卖作物、拿种子袋买种子；钱不够会被拒
 - 水壶容量与水源自动补水
-- 左上角 HUD 实时显示水 / 种子 / 收成 / 金币
+- 左上角 HUD 实时显示 金币 / 种子 / 作物 / 水量 / 手持物
 
 **半成品**
 - `plantType` 有字段但 `current_crop_type` 恒为 0，只有一种作物
-- 金币有数值但**没有任何用途**（还不能买卖）
 - `Land` 的 terrain 1 在图集里定义好了，但没代码使用
 
 **没做**
-- 经济（买种子 / 卖作物 / 商店）
 - 战斗（项目名里的 `Fight` 一行代码都没有）
 - 存档、音效、中文 UI
 
@@ -220,7 +250,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 1) 作物单元自测（11 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_plant.tscn --quit-after 2400 2>&1 | Out-String
 
-# 2) 农场端到端自测（25 项）
+# 2) 端到端自测（44 项）：手持道具 + 农场循环 + 商店经济 + 水源 + HUD
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_farm.tscn --quit-after 2400 2>&1 | Out-String
 
 # 3) 跑主场景 15 秒，抓运行时错误
@@ -231,6 +261,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 - `--fixed-fps 60` 让时间步长确定，定时器/生长行为可复现。
 - `--quit-after N` 是**帧数**，不是秒；配合 `--fixed-fps 60` 时 900 帧 = 15 秒。
 - 测试脚本用 `_check(说明, 条件)` 打印 `PASS`/`FAIL`，结尾打印 `RESULT fail=N`。
+- 端到端测试**尽量走 `FarmController.use_held_item()`**（玩家真实路径），而不是直接调底层方法。
 - 注入故障后引擎会打出带 `文件:行号` 和 GDScript 调用栈的 `ERROR`，**验证链路是可信的**（已实测）。
 
 ### 查文档，别凭记忆
@@ -246,7 +277,8 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 
 | # | 目标 | 状态 |
 |---|---|---|
-| 1 | 浇水 → 成熟 → 收获 闭环 | ✅ 已完成 |
-| 2 | 经济：卖作物赚钱、买种子、商店交互 | ⬜ 下一步 |
-| 3 | 战斗：会来破坏农场的敌人 + 玩家攻击 | ⬜ |
-| 4 | 打磨：多种作物、音效、中文 UI（需先放 CJK 字体）、存档 | ⬜ |
+| 1 | 浇水 → 成熟 → 收获 闭环 | ✅ |
+| 2 | 手持道具概念（Q 切换 + 单动作键分发） | ✅ |
+| 3 | 经济：卖作物、买种子、商店交互 | ✅ |
+| 4 | **战斗**：会来破坏农场的敌人 + 玩家攻击 | ⬜ 下一步 |
+| 5 | 打磨：多种作物、音效、中文 UI（需 CJK 字体）、存档 | ⬜ |

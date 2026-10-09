@@ -1,8 +1,13 @@
 [gd_scene format=3 uid="uid://bo88q2csy6rnc"]
 
 [ext_resource type="Texture2D" uid="uid://c2g48qq2w1748" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="1_o35xj"]
+[ext_resource type="Script" path="res://Scripts/buildings/market.gd" id="2_mkt"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mkt"]
+size = Vector2(72, 104)
 
 [node name="house" type="Node2D" unique_id=21025963]
+script = ExtResource("2_mkt")
 
 [node name="TilemapPacked3" type="Sprite2D" parent="." unique_id=329202933]
 position = Vector2(0, -24)
@@ -45,3 +50,11 @@ position = Vector2(0, -88)
 texture = ExtResource("1_o35xj")
 region_enabled = true
 region_rect = Rect2(160, 96, 16, 16)
+
+[node name="InteractionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Shape" type="CollisionShape2D" parent="InteractionArea"]
+position = Vector2(0, -40)
+shape = SubResource("RectangleShape2D_mkt")

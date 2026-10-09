@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://bei660qp5smq6" path="res://Scenes/buildings/water_bucket.tscn" id="8_ta4i7"]
 [ext_resource type="PackedScene" uid="uid://byymy2kf1g38r" path="res://Scenes/buildings/water_container.tscn" id="9_rqtgi"]
 [ext_resource type="Script" path="res://Scripts/UI/hud.gd" id="10_hud"]
+[ext_resource type="Script" path="res://Scripts/Interaction/farm_controller.gd" id="11_fctl"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -916,7 +917,7 @@ position = Vector2(20, 274)
 [node name="tree114" parent="level/Static/Trees" unique_id=1603515899 instance=ExtResource("5_0f2sa")]
 position = Vector2(31, 279)
 
-[node name="house" parent="level/Static" unique_id=21025963 instance=ExtResource("6_sur3v")]
+[node name="Market" parent="level/Static" unique_id=21025963 instance=ExtResource("6_sur3v")]
 position = Vector2(216, 96)
 
 [node name="Plants" type="Node2D" parent="level/Static" unique_id=193847066]
@@ -942,22 +943,24 @@ navigation_polygon = SubResource("NavigationPolygon_wvhbo")
 script = ExtResource("10_hud")
 
 [node name="Backdrop" type="ColorRect" parent="HUD"]
-offset_right = 230.0
+offset_right = 252.0
 offset_bottom = 34.0
 color = Color(0, 0, 0, 0.45)
 
 [node name="InfoLabel" type="Label" parent="HUD"]
 offset_left = 5.0
 offset_top = 3.0
-offset_right = 228.0
+offset_right = 250.0
 offset_bottom = 19.0
 theme_override_font_sizes/font_size = 10
 
-[node name="HintLabel" type="Label" parent="HUD"]
+[node name="HeldLabel" type="Label" parent="HUD"]
 offset_left = 5.0
 offset_top = 19.0
-offset_right = 228.0
+offset_right = 250.0
 offset_bottom = 33.0
 theme_override_font_sizes/font_size = 10
-text = "P plant    F water    E harvest"
+
+[node name="FarmController" type="Node" parent="."]
+script = ExtResource("11_fctl")
 
