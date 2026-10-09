@@ -17,6 +17,7 @@ const DEFAULT_PATH: String = "user://farm_save.json"
 @onready var land: FarmLand = $"../Land"
 @onready var cycle: DayCycle = $"../DayCycle"
 @onready var controller: FarmController = $"../FarmController"
+@onready var achievements: Achievements = get_node_or_null("../Achievements") as Achievements
 
 var _booted: bool = false
 
@@ -56,6 +57,7 @@ func save_game() -> bool:
 		"player": player.to_save_data(),
 		"land": land.to_save_data(),
 		"progress": controller.to_save_data(),
+		"achievements": achievements.to_save_data() if achievements != null else {},
 	}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f == null:
@@ -89,6 +91,8 @@ func load_game() -> bool:
 	land.apply_save_data(data.get("land", {}))
 	player.apply_save_data(data.get("player", {}))
 	controller.apply_save_data(data.get("progress", {}))
+	if achievements != null:
+		achievements.apply_save_data(data.get("achievements", {}))
 	print("[存档] 已读取（第 ", cycle.day, " 天，", player.money, " 金）")
 	return true
 

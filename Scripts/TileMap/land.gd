@@ -99,6 +99,18 @@ func destroy_plant_at(tile_pos: Vector2i) -> bool:
 		plant.queue_free()
 	return true
 
+## 雨天：给所有还没浇过水的作物免费浇一遍（不消耗玩家的水壶）。
+## 返回实际浇了几株。成熟的和刚浇过的会被 BasePlant.water() 自己挡掉。
+func water_all() -> int:
+	var n: int = 0
+	for tile in plants.keys():
+		var p: BasePlant = plants[tile]
+		if p == null or not is_instance_valid(p):
+			continue
+		if p.water():
+			n += 1
+	return n
+
 func clear_all_plants() -> int:
 	var n: int = plants.size()
 	for tile in plants.keys():

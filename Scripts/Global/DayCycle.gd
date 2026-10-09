@@ -23,6 +23,8 @@ const FADE_TIME: float = 2.0
 @export var running: bool = true
 
 @onready var night_tint: CanvasModulate = $"../NightTint"
+## 天气是可选的：没有这个节点也不会出错（测试场景可能只挂一部分）
+@onready var weather: Weather = get_node_or_null("../Weather") as Weather
 
 var day: int = 1
 var elapsed: float = 0.0
@@ -72,7 +74,11 @@ func _advance(delta: float) -> void:
 func _update_tint(delta: float) -> void:
 	var target: float = 1.0 if is_night else 0.0
 	_tint = move_toward(_tint, target, delta / FADE_TIME)
-	night_tint.color = DAY_COLOR.lerp(NIGHT_COLOR, _tint)
+	var col: Color = DAY_COLOR.lerp(NIGHT_COLOR, _tint)
+	# 雨天色调叠在昼夜之上 —— 同一块画布只能有一个 CanvasModulate，所以在这里合算
+	if weather != null and is_instance_valid(weather):
+		col = col.lerp(weather.tint_color(), weather.rain_amount())
+	night_tint.color = col
 
 func to_save_data() -> Dictionary:
 	return {"day": day, "elapsed": elapsed}

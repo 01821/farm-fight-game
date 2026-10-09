@@ -17,6 +17,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/animals/pest.tscn" id="13_boar"]
 [ext_resource type="Script" path="res://Scripts/Global/DayCycle.gd" id="14_day"]
 [ext_resource type="Script" path="res://Scripts/Global/SaveSystem.gd" id="15_save"]
+[ext_resource type="Script" path="res://Scripts/Global/Weather.gd" id="16_weather"]
+[ext_resource type="Script" path="res://Scripts/Global/Achievements.gd" id="17_ach"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -998,6 +1000,24 @@ text = "目标达成！\n谷仓建成了！"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="ToastBackdrop" type="ColorRect" parent="HUD"]
+visible = false
+offset_left = 90.0
+offset_top = 266.0
+offset_right = 310.0
+offset_bottom = 294.0
+color = Color(0, 0, 0, 0.72)
+
+[node name="Toast" type="Label" parent="HUD"]
+visible = false
+offset_left = 90.0
+offset_top = 266.0
+offset_right = 310.0
+offset_bottom = 294.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="FarmController" type="Node" parent="."]
 script = ExtResource("11_fctl")
 
@@ -1005,6 +1025,12 @@ script = ExtResource("11_fctl")
 
 [node name="DayCycle" type="Node" parent="."]
 script = ExtResource("14_day")
+
+[node name="Weather" type="Node" parent="."]
+script = ExtResource("16_weather")
+
+[node name="Achievements" type="Node" parent="."]
+script = ExtResource("17_ach")
 
 [node name="SaveSystem" type="Node" parent="."]
 script = ExtResource("15_save")

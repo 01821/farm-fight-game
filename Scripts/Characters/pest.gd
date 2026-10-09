@@ -77,10 +77,12 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF) -> void:
 
 func _die() -> void:
 	print("[战斗] ", display_name(), " 被赶跑了")
-	if _reward > 0 and _player != null and is_instance_valid(_player):
-		_player.earn(_reward)
-		Sfx.play("coin")
-		print("[战斗] 赏金 +", _reward, " 金")
+	if _player != null and is_instance_valid(_player):
+		_player.register_kill()
+		if _reward > 0:
+			_player.earn(_reward)
+			Sfx.play("coin")
+			print("[战斗] 赏金 +", _reward, " 金")
 	queue_free()
 
 func _physics_process(delta: float) -> void:

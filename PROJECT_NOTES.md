@@ -38,8 +38,11 @@ Scripts/
   Global/DayCycle.gd                      class_name DayCycle：昼夜循环
   Global/PestSpawner.gd                   class_name PestSpawner：夜晚放野猪
   Global/SaveSystem.gd                    class_name SaveSystem：存档 / 读档
+  Global/Weather.gd                       class_name Weather：天气（雨天自动浇灌）
+  Global/Achievements.gd                  class_name Achievements：成就
   Global/sfx.gd                           自动加载单例 Sfx：播放音效
   ../Tools/gen_sfx.gd                     一次性音效合成器（不在 Scripts 下）
+  ../Tools/analyze_crops.gd               一次性像素分析：判定作物阶段列映射
   Characters/{character,player,base_animal}.gd
   Characters/pest.gd                      class_name Pest：害兽，种类由 PestData 配置
   Characters/pest_data.gd                 class_name PestData：害兽数据表
@@ -100,10 +103,13 @@ baseLevel (Node2D)
 ├── HUD (CanvasLayer)                   script = hud.gd
 │   ├── Backdrop / InfoLabel / FarmLabel / HeldLabel / KeyLabel（四行状态）
 │   └── BannerBackdrop + Banner（达成目标时亮出的横幅，平时 visible = false）
+│   └── ToastBackdrop + Toast（成就提示条，底部居中，默认隐藏）
 ├── FarmController (Node)               script = farm_controller.gd ← F 键分发 + 目标判定
 ├── NightTint (CanvasModulate)          夜晚压暗画面（HUD 在 CanvasLayer 上，不受影响）
 ├── DayCycle (Node)                     script = DayCycle.gd ← 昼夜循环
 ├── SaveSystem (Node)                   script = SaveSystem.gd ← 存档 / 读档
+├── Weather (Node)                      script = Weather.gd ← 天气
+├── Achievements (Node)                 script = Achievements.gd ← 成就
 ├── PestSpawner (Node2D)                script = PestSpawner.gd，boar_scene 指向 boar.tscn
 └── level (Node2D, y_sort)
     ├── Static (Node2D, y_sort)
@@ -224,6 +230,37 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - 存档带 `version` 字段；**版本不符或 JSON 损坏时拒绝读取并给提示，不会崩**。
 - 各系统通过 `to_save_data()` / `apply_save_data()` 参与存档；以后新增系统照这个模式接一行即可。
 
+### 天气（借鉴同类农场游戏的「雨天」）
+
+`Weather`（挂在 `base_level` 上）。每天**天亮时掷一次**骰子决定今天晴还是雨（默认 30% 下雨）。
+
+- **下雨时**：每隔 `RAIN_TICK`（1 秒）给所有**还没浇过水**的作物免费浇一遍
+  —— 等于当天可以省下浇水的功夫去备战夜晚。刚种下的作物也会被浇到。
+- **画面偏冷**：雨天色调**不自己开 CanvasModulate**，而是交给 `DayCycle` 一起算
+  （同一块画布只能有一个 `CanvasModulate` 生效，两个会互相覆盖）。
+  实测：晴天 `(1.0, 1.0, 1.0)` → 雨天 `(0.7975, 0.829, 0.919)`。
+- HUD 第一行显示 `晴天` / `雨天`。
+- `Weather.set_rainy(bool)` 可以强制天气（测试/调试用）。
+
+### 成就
+
+`Achievements`（挂在 `base_level` 上）。每帧检查一次条件，满足就解锁：打日志 + 放音 +
+HUD 底部弹一条 2.5 秒的提示条。解锁记录进存档。
+
+| id | 名称 | 条件 |
+|---|---|---|
+| `first_harvest` | 初次丰收 | 收获第一个作物 |
+| `first_kill` | 初次交锋 | 赶跑第一只害兽 |
+| `harvest_10` | 绿手指 | 累计收获 10 个作物 |
+| `kill_25` | 农场卫士 | 累计赶跑 25 只害兽 |
+| `day_3` | 熬过三夜 | 活到第 4 天 |
+| `barn` | 谷仓建成 | 攒够 300 金 |
+
+- 条件全部从**已有状态**推导（`player.total_harvested` / `player.total_kills` / `cycle.day` /
+  `controller.goal_reached`），**不额外维护一套统计**。
+- ⚠️ 因为是从状态推导的，**清空解锁记录但状态仍满足时会被立刻重新解锁** —— 这是设计使然。
+  测试要验证「载入」而不是「重新推导」，就得先构造一个条件并不支持的集合。
+
 ### 音效
 
 自动加载单例 `Sfx`（`Scenes/global/sfx.tscn`），任何脚本直接 `Sfx.play("hit")`。
@@ -321,18 +358,28 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 
 **农场图集的行 = 作物种类**（已 8 倍放大逐格确认）：行 0 胡萝卜、行 1 紫甘蓝、行 2 玉米、行 3 番茄、行 4 卷心菜。每行的列 4..8 是同一种作物的生长序列。
 
-### ⚠️ 待确认：生长阶段的第 3 帧可能是「收获后的空地」
+### ✅ 已用像素分析判定：STAGE_COLUMNS 保持 `[4, 5, 6, 7, 8]`
 
-`CropData.STAGE_COLUMNS = [4, 5, 6, 7, 8]`。放大看：
-- 列 4 / 5 / 6 明确是「幼苗 → 生长 → 成株」
-- 列 8 看起来是**收获物图标**（画得比一格还大）
-- 列 7 在胡萝卜 / 番茄 / 卷心菜行看起来像**一堆土**，在玉米行看起来像**枯黄但带玉米的植株**
+曾经怀疑「列 7 是各种作物共用的空地/土堆」，那样的话 `growStage=3` 会显示成作物消失。
+`Tools/analyze_crops.gd` 用**像素级比对**把这个悬案结掉了。
 
-两种解读都说得通，静止图无法判定。如果真相是「列 7 = 空地、列 8 = 收获物」，
-那么现在 `growStage=3` 会**显示成作物消失**。改法是一行：把 `STAGE_COLUMNS` 改成
-`[4, 5, 6, 8]`，同时 `MAX_STAGE` 改成 `3`。
+判据：如果某一列是各种作物**共用**的一张图（空地/土堆），它在这 5 种作物之间的像素差
+应该接近 0；如果是各自的生长阶段，差异必然很大。
 
-**跑一局盯住作物长大的过程**：若第 3 帧变成一坨土、第 4 帧突然冒出一颗大蔬菜，就按上面改。
+实测（平均每像素 RGBA 绝对差 ×100）：
+
+| 图集列 | 跨作物平均差 | 与土块的平均差 |
+|---|---|---|
+| 4（幼苗） | 35.88 | 172.29 |
+| 5 | 37.62 | 154.19 |
+| 6 | 52.52 | 132.22 |
+| 7 | **49.51** | 133.72 |
+| 8 | 50.09 | 123.77 |
+
+**没有任何一列接近 0**。列 7 的 49.51 与列 6、8 同量级 —— 说明**列 7 是随作物变化的**，
+不是共用空地。**当前映射是对的，不用改。**
+
+（真要改的话仍然只改一行：`CropData.STAGE_COLUMNS`，同时调 `MAX_STAGE`。）
 
 ---
 
@@ -401,6 +448,9 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **音效**：10 个由代码合成的提示音，覆盖种植 / 浇水 / 收获 / 买卖 / 战斗 / 昼夜 / 目标
 - **打击感**：砍中野猪有刀光 + 受击闪红 + 硬直 + 击退
 - **胜利反馈**：攒够 300 金亮出「目标达成！谷仓建成了！」横幅
+- **攻击动画**：刀光按剩余时间驱动缩放/旋转/淡出（0.55 → 1.35 倍，伴随挥砍旋转）
+- **天气**：每天天亮掷骰子，雨天画面偏冷且**作物自动浇水**
+- **成就**：6 个，解锁时 HUD 底部弹提示条，进度进存档
 - 水壶容量与水源自动补水
 - HUD：**中文界面**，显示 金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
@@ -451,11 +501,17 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 6) 音效（33 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_sfx.tscn --quit-after 3000 2>&1 | Out-String
 
-# 7) 跑主场景 100 秒（约 2.2 个昼夜），抓运行时错误
-& $godot --headless --path . --fixed-fps 60 --quit-after 6000 2>&1 | Out-String
+# 7) 天气（19 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_weather.tscn --quit-after 4000 2>&1 | Out-String
+
+# 8) 成就（26 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_achievements.tscn --quit-after 4000 2>&1 | Out-String
+
+# 9) 跑主场景 150 秒（约 3.3 个昼夜），抓运行时错误
+& $godot --headless --path . --fixed-fps 60 --quit-after 9000 2>&1 | Out-String
 ```
 
-合计 229 项断言。
+合计 277 项断言。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -487,5 +543,6 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 8 | 多种作物（5 种，1-5 切换，价格与生长时间各不相同） | ✅ |
 | 9 | **音效**（代码合成 10 个提示音 + 预建 AudioStreamPlayer 单例） | ✅ |
 | 10 | 打磨：击退、胜利横幅、隐藏调试标签 | ✅ |
-| 11 | **害兽种类 + 难度爬坡**（野猪/蝙蝠/蜘蛛，随天数解锁，击杀有赏金） | ✅ |
-| 12 | 还没做：攻击动画、昼夜影响生长速度、成就、多地图 | ⬜ |
+| 11 | 害兽种类 + 难度爬坡（野猪/蝙蝠/蜘蛛，随天数解锁，击杀有赏金） | ✅ |
+| 12 | 攻击动画 + 天气（雨天自动浇灌）+ 成就系统 | ✅ |
+| 13 | 还没做：多地图（矿洞）、季节、NPC、动物产出 | ⬜ |

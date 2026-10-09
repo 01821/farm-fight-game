@@ -33,6 +33,10 @@ var water_left: int = 0
 var hp: int = MAX_HP
 var active_item: int = Item.SEED
 
+## 生涯累计（成就用，不随卖作物清零）
+var total_harvested: int = 0
+var total_kills: int = 0
+
 ## 当前重叠的水源数量（站在水源旁自动补水）
 var _water_source_count: int = 0
 var _attack_cd: float = 0.0
@@ -53,10 +57,23 @@ func _process(delta: float) -> void:
 	if _water_source_count > 0 and water_left < WATER_CAPACITY:
 		water_left = WATER_CAPACITY
 	_attack_cd = maxf(0.0, _attack_cd - delta)
-	if _slash_time > 0.0:
-		_slash_time = maxf(0.0, _slash_time - delta)
-		if _slash_time <= 0.0:
-			slash.visible = false
+	_update_slash(delta)
+
+## 刀光动画。不用 AnimationPlayer —— 它每帧被状态机抢去播 Idle/Move，
+## 所以这里按剩余时间直接驱动缩放/旋转/透明度，纯数据驱动、可测。
+func _update_slash(delta: float) -> void:
+	if _slash_time <= 0.0:
+		return
+	_slash_time = maxf(0.0, _slash_time - delta)
+	if _slash_time <= 0.0:
+		slash.visible = false
+		return
+	var t: float = 1.0 - _slash_time / SLASH_TIME      # 0 -> 1
+	var dir: float = -1.0 if sprite_2d.flip_h else 1.0
+	var grow: float = lerpf(0.55, 1.35, t)
+	slash.scale = Vector2(dir * grow, grow)
+	slash.rotation = lerpf(-0.6, 0.5, t) * dir
+	slash.modulate = Color(1, 1, 1, lerpf(0.95, 0.0, t))
 
 # --- 手持道具 ---
 
@@ -115,6 +132,10 @@ func add_harvest(type_id: int, n: int = 1) -> void:
 	if not CropData.is_valid(type_id):
 		return
 	harvested[type_id] = maxi(0, harvested[type_id] + n)
+	total_harvested += n
+
+func register_kill() -> void:
+	total_kills += 1
 
 ## 进账（卖作物、击杀赏金等）。目标判定由 FarmController 每帧读 money，这里不用通知谁。
 func earn(amount: int) -> void:
@@ -144,9 +165,12 @@ func can_attack() -> bool:
 
 func begin_attack_cooldown() -> void:
 	_attack_cd = ATTACK_COOLDOWN
-	# 刀光：复用场景里预建的 Slash 节点，只做开关 + 朝向翻转
+	# 刀光：复用场景里预建的 Slash 节点，只做开关 + 起始姿态，动画在 _update_slash 里推进
+	var dir: float = -1.0 if sprite_2d.flip_h else 1.0
 	slash.visible = true
-	slash.scale.x = -1.0 if sprite_2d.flip_h else 1.0
+	slash.scale = Vector2(dir * 0.55, 0.55)
+	slash.rotation = -0.6 * dir
+	slash.modulate = Color(1, 1, 1, 0.95)
 	_slash_time = SLASH_TIME
 
 func take_damage(amount: int) -> void:
@@ -176,6 +200,7 @@ func to_save_data() -> Dictionary:
 		"money": money, "hp": hp, "water_left": water_left,
 		"seeds": Array(seeds), "harvested": Array(harvested),
 		"seed_type": seed_type, "active_item": active_item,
+		"total_harvested": total_harvested, "total_kills": total_kills,
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -185,6 +210,8 @@ func apply_save_data(d: Dictionary) -> void:
 	water_left = clampi(int(d.get("water_left", 0)), 0, WATER_CAPACITY)
 	seed_type = clampi(int(d.get("seed_type", 0)), 0, CropData.count() - 1)
 	active_item = clampi(int(d.get("active_item", Item.SEED)), 0, ITEM_NAMES.size() - 1)
+	total_harvested = maxi(0, int(d.get("total_harvested", 0)))
+	total_kills = maxi(0, int(d.get("total_kills", 0)))
 	_read_counts(d.get("seeds", null), seeds)
 	_read_counts(d.get("harvested", null), harvested)
 	global_position = Vector2(

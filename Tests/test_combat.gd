@@ -209,6 +209,20 @@ func _ready() -> void:
 	_check("击杀拿到赏金 2 金", _player.money == 2)
 	_check("蝙蝠已消失", _count_pests() == 0)
 
+	print("--- 刀光动画 ---")
+	_player.global_position = arena
+	_player.active_item = Player.Item.SWORD
+	await get_tree().create_timer(0.5).timeout
+	_ctl.use_held_item()
+	var grow0: float = absf(_slash.scale.x)
+	_check("挥砍瞬间刀光可见且很小", _slash.visible == true and grow0 < 0.7)
+	await get_tree().create_timer(0.06).timeout
+	var grow1: float = absf(_slash.scale.x)
+	print("  INFO 刀光 scale ", snappedf(grow0, 0.01), " -> ", snappedf(grow1, 0.01))
+	_check("刀光在放大（有挥砍感）", grow1 > grow0 + 0.15)
+	await get_tree().create_timer(0.15).timeout
+	_check("刀光播完自动隐藏", _slash.visible == false)
+
 	print("--- 蜘蛛啃一株不罢休 ---")
 	_land.clear_all_plants()
 	_player.seeds[0] = 5
