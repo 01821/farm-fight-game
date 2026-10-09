@@ -1,0 +1,147 @@
+[gd_scene format=3 uid="uid://cwr6itq5omtrl"]
+
+[ext_resource type="Script" uid="uid://cejsv4a0dulqx" path="res://Scripts/Characters/base_animal.gd" id="1_jj0bc"]
+[ext_resource type="Texture2D" uid="uid://c2g48qq2w1748" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="1_p5wag"]
+[ext_resource type="Script" uid="uid://br6la6uadugqv" path="res://Scripts/State/state_machine.gd" id="2_7h0qj"]
+[ext_resource type="Script" uid="uid://bc01ugsqsgtga" path="res://Scripts/State/animal/idle.gd" id="3_1mpki"]
+[ext_resource type="Script" uid="uid://dx2klji2an6we" path="res://Scripts/State/animal/move.gd" id="4_jj0bc"]
+
+[sub_resource type="Animation" id="Animation_p5wag"]
+resource_name = "Idle"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0, -7)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="Animation" id="Animation_7h0qj"]
+resource_name = "Move"
+length = 0.6000100089408457
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.4, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0, -7), Vector2(1, -7), Vector2(-1, -7), Vector2(0, -7)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.4, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 0.04544735, -0.17104226, 0.0]
+}
+
+[sub_resource type="Animation" id="Animation_rmw3o"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0, -7)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_rmw3o"]
+_data = {
+&"Idle": SubResource("Animation_p5wag"),
+&"Move": SubResource("Animation_7h0qj"),
+&"RESET": SubResource("Animation_rmw3o")
+}
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_jj0bc"]
+radius = 6.0
+
+[node name="base_animal" type="CharacterBody2D" unique_id=1730941467]
+collision_layer = 4
+script = ExtResource("1_jj0bc")
+metadata/_custom_type_script = "uid://bs3e6ep6ea3uf"
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=2142658080]
+position = Vector2(0, -7)
+texture = ExtResource("1_p5wag")
+region_enabled = true
+region_rect = Rect2(0, 160, 16, 16)
+
+[node name="StateMachine" type="Node" parent="." unique_id=2146673695]
+script = ExtResource("2_7h0qj")
+metadata/_custom_type_script = "uid://br6la6uadugqv"
+
+[node name="Idle" type="Node" parent="StateMachine" unique_id=580002934]
+script = ExtResource("3_1mpki")
+metadata/_custom_type_script = "uid://ehm1b48faops"
+
+[node name="Move" type="Node" parent="StateMachine" unique_id=1240293788]
+script = ExtResource("4_jj0bc")
+metadata/_custom_type_script = "uid://ehm1b48faops"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1840607069]
+libraries/ = SubResource("AnimationLibrary_rmw3o")
+autoplay = &"Idle"
+
+[node name="debugLabel" type="Label" parent="." unique_id=903617642]
+offset_right = 40.0
+offset_bottom = 23.0
+theme_override_font_sizes/font_size = 8
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=502004525]
+position = Vector2(0, -6)
+shape = SubResource("CircleShape2D_jj0bc")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=1744145857]
+debug_enabled = true
+
+[node name="MoveTimer" type="Timer" parent="." unique_id=1067725654]
+wait_time = 5.0
+autostart = true
+
+[connection signal="velocity_computed" from="NavigationAgent2D" to="StateMachine/Move" method="_on_navigation_agent_2d_velocity_computed"]
+[connection signal="timeout" from="MoveTimer" to="StateMachine/Idle" method="_on_move_timer_timeout"]

@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://bo88q2csy6rnc"]
+
+[ext_resource type="Texture2D" uid="uid://c2g48qq2w1748" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="1_o35xj"]
+
+[node name="house" type="Node2D" unique_id=21025963]
+
+[node name="TilemapPacked3" type="Sprite2D" parent="." unique_id=329202933]
+position = Vector2(0, -24)
+texture = ExtResource("1_o35xj")
+region_enabled = true
+region_rect = Rect2(96, 112, 48, 16)
+
+[node name="TilemapPacked4" type="Sprite2D" parent="." unique_id=164240079]
+position = Vector2(0, -35)
+texture = ExtResource("1_o35xj")
+region_enabled = true
+region_rect = Rect2(112, 122, 16, 6)
+
+[node name="TilemapPacked5" type="Sprite2D" parent="." unique_id=389429353]
+position = Vector2(-14, -8)
+texture = ExtResource("1_o35xj")
+region_enabled = true
+region_rect = Rect2(96, 144, 16, 16)
+
+[node name="TilemapPacked7" type="Sprite2D" parent="." unique_id=1892770322]
+position = Vector2(16, -8)
+texture = ExtResource("1_o35xj")
+region_enabled = true
+region_rect = Rect2(128, 144, 16, 16)
+
+[node name="door" type="Sprite2D" parent="." unique_id=954067859]
+position = Vector2(0, -8)
+texture = ExtResource("1_o35xj")
+region_enabled = true
+region_rect = Rect2(112, 160, 16, 16)
+
+[node name="top" type="Sprite2D" parent="." unique_id=1955744235]
+position = Vector2(0, -48)
+texture = ExtResource("1_o35xj")
+region_enabled = true
+region_rect = Rect2(144, 112, 48, 64)
+
+[node name="top2" type="Sprite2D" parent="." unique_id=594419160]
+position = Vector2(0, -88)
+texture = ExtResource("1_o35xj")
+region_enabled = true
+region_rect = Rect2(160, 96, 16, 16)

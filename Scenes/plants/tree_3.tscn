@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://b18kh1uq1uvwl"]
+
+[ext_resource type="Texture2D" uid="uid://c2g48qq2w1748" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="1_6xcya"]
+
+[node name="tree3" type="Sprite2D" unique_id=897128914]
+position = Vector2(0, -6)
+texture = ExtResource("1_6xcya")
+region_enabled = true
+region_rect = Rect2(48, 48, 16, 16)

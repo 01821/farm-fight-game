@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://orgflfd17epj"]
+
+[ext_resource type="Script" uid="uid://blow7utymo8kh" path="res://Scripts/plants/base_plant.gd" id="1_ex8w2"]
+[ext_resource type="Texture2D" uid="uid://c2g48qq2w1748" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="1_r0s23"]
+
+[node name="BasePlant" type="Node2D" unique_id=1632929632]
+script = ExtResource("1_ex8w2")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=298857532]
+position = Vector2(0, -3)
+texture = ExtResource("1_r0s23")
+region_enabled = true
+region_rect = Rect2(64, 0, 16, 16)
+
+[node name="Timer" type="Timer" parent="." unique_id=281567862]
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

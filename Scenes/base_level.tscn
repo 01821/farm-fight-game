@@ -1,0 +1,938 @@
+[gd_scene format=4 uid="uid://btccb47s76sxj"]
+
+[ext_resource type="Texture2D" uid="uid://cwlb6hi28i4ng" path="res://Assets/kenney_tiny-dungeon/img_white.png" id="1_5gpc1"]
+[ext_resource type="Texture2D" uid="uid://dbsgrj5qe7j3d" path="res://Assets/kenney_tiny-town/Tilemap/tilemap_packed.png" id="2_5s04l"]
+[ext_resource type="Texture2D" uid="uid://bed7qb10npxgg" path="res://Assets/kenney_tiny-farm/Tilemap/sample.png" id="2_l7ey7"]
+[ext_resource type="Texture2D" uid="uid://c2g48qq2w1748" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="4_ytws3"]
+[ext_resource type="PackedScene" uid="uid://bc1f7uag5ckrf" path="res://Scenes/plants/tree_1.tscn" id="5_0f2sa"]
+[ext_resource type="Script" uid="uid://c5fyl1cl3fjet" path="res://Scripts/TileMap/land.gd" id="5_0k83q"]
+[ext_resource type="PackedScene" uid="uid://bo88q2csy6rnc" path="res://Scenes/buildings/house.tscn" id="6_sur3v"]
+[ext_resource type="PackedScene" uid="uid://cfbghie4rmmju" path="res://Scenes/character/player.tscn" id="7_4rblm"]
+[ext_resource type="PackedScene" uid="uid://cwr6itq5omtrl" path="res://Scenes/animals/base_animal.tscn" id="8_0k83q"]
+[ext_resource type="PackedScene" uid="uid://bei660qp5smq6" path="res://Scenes/buildings/water_bucket.tscn" id="8_ta4i7"]
+[ext_resource type="PackedScene" uid="uid://byymy2kf1g38r" path="res://Scenes/buildings/water_container.tscn" id="9_rqtgi"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
+texture = ExtResource("2_5s04l")
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+5:0/0 = 0
+6:0/0 = 0
+7:0/0 = 0
+8:0/0 = 0
+9:0/0 = 0
+10:0/0 = 0
+11:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+4:1/0 = 0
+5:1/0 = 0
+6:1/0 = 0
+7:1/0 = 0
+8:1/0 = 0
+9:1/0 = 0
+10:1/0 = 0
+11:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+4:2/0 = 0
+5:2/0 = 0
+6:2/0 = 0
+7:2/0 = 0
+8:2/0 = 0
+9:2/0 = 0
+10:2/0 = 0
+11:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+4:3/0 = 0
+5:3/0 = 0
+6:3/0 = 0
+7:3/0 = 0
+8:3/0 = 0
+9:3/0 = 0
+10:3/0 = 0
+11:3/0 = 0
+0:4/0 = 0
+1:4/0 = 0
+2:4/0 = 0
+3:4/0 = 0
+4:4/0 = 0
+5:4/0 = 0
+6:4/0 = 0
+7:4/0 = 0
+8:4/0 = 0
+9:4/0 = 0
+10:4/0 = 0
+11:4/0 = 0
+0:5/0 = 0
+1:5/0 = 0
+2:5/0 = 0
+3:5/0 = 0
+4:5/0 = 0
+5:5/0 = 0
+6:5/0 = 0
+7:5/0 = 0
+8:5/0 = 0
+9:5/0 = 0
+10:5/0 = 0
+11:5/0 = 0
+0:6/0 = 0
+1:6/0 = 0
+2:6/0 = 0
+3:6/0 = 0
+4:6/0 = 0
+5:6/0 = 0
+6:6/0 = 0
+7:6/0 = 0
+8:6/0 = 0
+9:6/0 = 0
+10:6/0 = 0
+11:6/0 = 0
+0:7/0 = 0
+1:7/0 = 0
+2:7/0 = 0
+3:7/0 = 0
+4:7/0 = 0
+5:7/0 = 0
+6:7/0 = 0
+7:7/0 = 0
+8:7/0 = 0
+9:7/0 = 0
+10:7/0 = 0
+11:7/0 = 0
+0:8/0 = 0
+1:8/0 = 0
+2:8/0 = 0
+3:8/0 = 0
+4:8/0 = 0
+5:8/0 = 0
+6:8/0 = 0
+7:8/0 = 0
+8:8/0 = 0
+9:8/0 = 0
+10:8/0 = 0
+11:8/0 = 0
+0:9/0 = 0
+1:9/0 = 0
+2:9/0 = 0
+3:9/0 = 0
+4:9/0 = 0
+5:9/0 = 0
+6:9/0 = 0
+7:9/0 = 0
+8:9/0 = 0
+9:9/0 = 0
+10:9/0 = 0
+11:9/0 = 0
+0:10/0 = 0
+1:10/0 = 0
+2:10/0 = 0
+3:10/0 = 0
+4:10/0 = 0
+5:10/0 = 0
+6:10/0 = 0
+7:10/0 = 0
+8:10/0 = 0
+9:10/0 = 0
+10:10/0 = 0
+11:10/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_vhwmw"]
+sources/0 = SubResource("TileSetAtlasSource_4rblm")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0k83q"]
+texture = ExtResource("4_ytws3")
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+5:0/0 = 0
+6:0/0 = 0
+7:0/0 = 0
+8:0/0 = 0
+9:0/0 = 0
+10:0/0 = 0
+11:0/0 = 0
+0:1/0 = 0
+0:1/0/terrain_set = 0
+0:1/0/terrain = 0
+0:1/0/terrains_peering_bit/bottom_side = 0
+1:1/0 = 0
+1:1/0/terrain_set = 0
+1:1/0/terrain = 1
+1:1/0/terrains_peering_bit/bottom_side = 1
+2:1/0 = 0
+3:1/0 = 0
+4:1/0 = 0
+5:1/0 = 0
+6:1/0 = 0
+7:1/0 = 0
+8:1/0 = 0
+9:1/0 = 0
+10:1/0 = 0
+11:1/0 = 0
+0:2/0 = 0
+0:2/0/terrain_set = 0
+0:2/0/terrain = 0
+0:2/0/terrains_peering_bit/bottom_side = 0
+0:2/0/terrains_peering_bit/top_side = 0
+1:2/0 = 0
+1:2/0/terrain_set = 0
+1:2/0/terrain = 1
+1:2/0/terrains_peering_bit/bottom_side = 1
+1:2/0/terrains_peering_bit/top_side = 1
+2:2/0 = 0
+3:2/0 = 0
+4:2/0 = 0
+5:2/0 = 0
+6:2/0 = 0
+7:2/0 = 0
+8:2/0 = 0
+9:2/0 = 0
+10:2/0 = 0
+11:2/0 = 0
+0:3/0 = 0
+0:3/0/terrain_set = 0
+0:3/0/terrain = 0
+0:3/0/terrains_peering_bit/top_side = 0
+1:3/0 = 0
+1:3/0/terrain_set = 0
+1:3/0/terrain = 1
+1:3/0/terrains_peering_bit/top_side = 1
+2:3/0 = 0
+3:3/0 = 0
+4:3/0 = 0
+5:3/0 = 0
+6:3/0 = 0
+7:3/0 = 0
+8:3/0 = 0
+9:3/0 = 0
+10:3/0 = 0
+11:3/0 = 0
+0:4/0 = 0
+1:4/0 = 0
+2:4/0 = 0
+3:4/0 = 0
+4:4/0 = 0
+5:4/0 = 0
+6:4/0 = 0
+7:4/0 = 0
+8:4/0 = 0
+9:4/0 = 0
+10:4/0 = 0
+11:4/0 = 0
+0:5/0 = 0
+1:5/0 = 0
+2:5/0 = 0
+3:5/0 = 0
+4:5/0 = 0
+5:5/0 = 0
+6:5/0 = 0
+7:5/0 = 0
+8:5/0 = 0
+9:5/0 = 0
+10:5/0 = 0
+11:5/0 = 0
+0:6/0 = 0
+1:6/0 = 0
+2:6/0 = 0
+3:6/0 = 0
+4:6/0 = 0
+5:6/0 = 0
+6:6/0 = 0
+7:6/0 = 0
+8:6/0 = 0
+9:6/0 = 0
+10:6/0 = 0
+11:6/0 = 0
+0:7/0 = 0
+1:7/0 = 0
+2:7/0 = 0
+3:7/0 = 0
+4:7/0 = 0
+5:7/0 = 0
+6:7/0 = 0
+7:7/0 = 0
+8:7/0 = 0
+9:7/0 = 0
+10:7/0 = 0
+11:7/0 = 0
+0:8/0 = 0
+1:8/0 = 0
+2:8/0 = 0
+3:8/0 = 0
+4:8/0 = 0
+5:8/0 = 0
+6:8/0 = 0
+7:8/0 = 0
+8:8/0 = 0
+9:8/0 = 0
+10:8/0 = 0
+11:8/0 = 0
+0:9/0 = 0
+1:9/0 = 0
+2:9/0 = 0
+3:9/0 = 0
+4:9/0 = 0
+5:9/0 = 0
+6:9/0 = 0
+6:9/0/physics_layer_0/polygon_0/points = PackedVector2Array(-6, -8, -6, 8, 8, 8, 8, -8)
+7:9/0 = 0
+8:9/0 = 0
+8:9/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, -8, 8, 6, 8, 6, -8)
+9:9/0 = 0
+10:9/0 = 0
+11:9/0 = 0
+0:10/0 = 0
+1:10/0 = 0
+2:10/0 = 0
+3:10/0 = 0
+4:10/0 = 0
+5:10/0 = 0
+6:10/0 = 0
+7:10/0 = 0
+8:10/0 = 0
+9:10/0 = 0
+10:10/0 = 0
+11:10/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ta4i7"]
+texture = ExtResource("2_5s04l")
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+5:0/0 = 0
+6:0/0 = 0
+7:0/0 = 0
+8:0/0 = 0
+9:0/0 = 0
+10:0/0 = 0
+11:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+4:1/0 = 0
+5:1/0 = 0
+6:1/0 = 0
+7:1/0 = 0
+8:1/0 = 0
+9:1/0 = 0
+10:1/0 = 0
+11:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+4:2/0 = 0
+5:2/0 = 0
+6:2/0 = 0
+7:2/0 = 0
+8:2/0 = 0
+9:2/0 = 0
+10:2/0 = 0
+11:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+4:3/0 = 0
+5:3/0 = 0
+6:3/0 = 0
+7:3/0 = 0
+8:3/0 = 0
+8:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(8, -4, -4, -4, -4, 8, 4, 8, 4, 4, 8, 4)
+9:3/0 = 0
+9:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -4, 8, -4, 8, 4, -8, 4)
+10:3/0 = 0
+10:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -4, 4, -4, 4, 8, 0, 8, 0, 4, -8, 4)
+11:3/0 = 0
+0:4/0 = 0
+1:4/0 = 0
+2:4/0 = 0
+3:4/0 = 0
+4:4/0 = 0
+5:4/0 = 0
+6:4/0 = 0
+7:4/0 = 0
+8:4/0 = 0
+8:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(4, -8, 4, 8, -4, 8, -4, -8)
+9:4/0 = 0
+10:4/0 = 0
+10:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(4, -8, 4, 8, -4, 8, -4, -8)
+11:4/0 = 0
+0:5/0 = 0
+1:5/0 = 0
+2:5/0 = 0
+3:5/0 = 0
+4:5/0 = 0
+5:5/0 = 0
+6:5/0 = 0
+7:5/0 = 0
+8:5/0 = 0
+8:5/0/physics_layer_0/polygon_0/points = PackedVector2Array(4, -8, 4, -2, 8, -2, 8, 4, 4, 4, 4, 6, -4, 6, -4, 8, -4, -8)
+9:5/0 = 0
+10:5/0 = 0
+10:5/0/physics_layer_0/polygon_0/points = PackedVector2Array(4, -8, 4, 6, -4, 6, -4, 4, -8, 4, -8, -2, -2, -2, -2, -8)
+11:5/0 = 0
+0:6/0 = 0
+1:6/0 = 0
+2:6/0 = 0
+3:6/0 = 0
+4:6/0 = 0
+5:6/0 = 0
+6:6/0 = 0
+7:6/0 = 0
+8:6/0 = 0
+8:6/0/physics_layer_0/polygon_0/points = PackedVector2Array(-2, -6, -2, 6, 2, 6, 2, 4, 8, 4, 8, -2, 2, -2, 2, -6)
+9:6/0 = 0
+10:6/0 = 0
+10:6/0/physics_layer_0/polygon_0/points = PackedVector2Array(-2, -6, -2, -2, -8, -2, -8, 4, -2, 4, -2, 6, 2, 6, 2, -6)
+11:6/0 = 0
+0:7/0 = 0
+1:7/0 = 0
+2:7/0 = 0
+3:7/0 = 0
+4:7/0 = 0
+5:7/0 = 0
+6:7/0 = 0
+7:7/0 = 0
+8:7/0 = 0
+9:7/0 = 0
+10:7/0 = 0
+11:7/0 = 0
+0:8/0 = 0
+1:8/0 = 0
+2:8/0 = 0
+3:8/0 = 0
+4:8/0 = 0
+5:8/0 = 0
+6:8/0 = 0
+7:8/0 = 0
+8:8/0 = 0
+9:8/0 = 0
+10:8/0 = 0
+11:8/0 = 0
+0:9/0 = 0
+1:9/0 = 0
+2:9/0 = 0
+3:9/0 = 0
+4:9/0 = 0
+5:9/0 = 0
+6:9/0 = 0
+7:9/0 = 0
+8:9/0 = 0
+9:9/0 = 0
+10:9/0 = 0
+11:9/0 = 0
+0:10/0 = 0
+1:10/0 = 0
+2:10/0 = 0
+3:10/0 = 0
+4:10/0 = 0
+5:10/0 = 0
+6:10/0 = 0
+7:10/0 = 0
+8:10/0 = 0
+9:10/0 = 0
+10:10/0 = 0
+11:10/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_wvhbo"]
+physics_layer_0/collision_layer = 1
+terrain_set_0/mode = 0
+terrain_set_0/terrain_0/name = "Terrain 0"
+terrain_set_0/terrain_0/color = Color(0.5, 0.34375, 0.25, 1)
+terrain_set_0/terrain_1/name = "Terrain 1"
+terrain_set_0/terrain_1/color = Color(0.8141247, 0, 0.34968987, 1)
+sources/0 = SubResource("TileSetAtlasSource_0k83q")
+sources/1 = SubResource("TileSetAtlasSource_ta4i7")
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_wvhbo"]
+vertices = PackedVector2Array(364.4922, 18.851563, 368.92188, 103.828125, 364.54688, 118.796875, 358, 104, 358, 26, 331.92188, 117.99219, 316, 104, 264.14063, 120.78125, 308, 104, 252, 17.148438, 266, 26, 252, 102.921875, 266, 104, 308, 72, 294, 72, 294, 54, 330, 54, 330, 72, 316, 72)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3, 4), PackedInt32Array(3, 2, 5, 6), PackedInt32Array(6, 5, 7, 8), PackedInt32Array(9, 0, 4, 10), PackedInt32Array(11, 9, 10, 12, 7), PackedInt32Array(13, 14, 15, 16), PackedInt32Array(16, 17, 18), PackedInt32Array(13, 16, 18), PackedInt32Array(8, 13, 18, 6), PackedInt32Array(7, 12, 8)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(242, 7, 374, 9, 379, 105, 372, 129, 332, 128, 259, 131, 242, 106)])
+source_geometry_mode = 2
+
+[node name="baseLevel" type="Node2D" unique_id=1498547941]
+
+[node name="background" type="Sprite2D" parent="." unique_id=1277281521]
+modulate = Color(0.5176471, 0.7764706, 0.4117647, 1)
+position = Vector2(24.000002, 264)
+scale = Vector2(648.50006, 486.57748)
+texture = ExtResource("1_5gpc1")
+
+[node name="Sample" type="Sprite2D" parent="." unique_id=187727629]
+position = Vector2(288, 432)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_l7ey7")
+
+[node name="Grass" type="TileMapLayer" parent="." unique_id=878191482]
+tile_map_data = PackedByteArray("AAD+/wEAAAACAAAAAAD+/wIAAAACAAAAAAD+/wUAAAACAAAAAAD+/wkAAAACAAAAAAD+/xAAAAABAAAAAAD+/xIAAAACAAAAAAD//wMAAAACAAAAAAD//wQAAAACAAAAAAD//wYAAAABAAAAAAD//wcAAAACAAAAAAD//w0AAAABAAAAAAD//w8AAAABAAAAAAAAAAUAAAACAAAAAAAAAAwAAAACAAAAAAAAAA0AAAABAAAAAAAAAA4AAAABAAAAAAAAABAAAAABAAAAAAABAAEAAAABAAAAAAABAAIAAAABAAAAAAABAAgAAAABAAAAAAABAAkAAAACAAAAAAABAAoAAAACAAAAAAABABIAAAABAAAAAAACAAMAAAABAAAAAAACAAgAAAABAAAAAAACAAoAAAABAAAAAAACABMAAAABAAAAAAADAAMAAAACAAAAAAADAAgAAAACAAAAAAADAAkAAAABAAAAAAADAAoAAAACAAAAAAADAA0AAAABAAAAAAADAA4AAAACAAAAAAADABEAAAACAAAAAAAEAAgAAAACAAAAAAAFAAEAAAABAAAAAAAFAAoAAAABAAAAAAAGAAEAAAABAAAAAAAGAAMAAAACAAAAAAAGABIAAAACAAAAAAAHAAIAAAABAAAAAAAHAAUAAAABAAAAAAAHAAgAAAABAAAAAAAHAAsAAAACAAAAAAAIAAwAAAABAAAAAAAIAA4AAAABAAAAAAAJAAMAAAACAAAAAAAJAAgAAAABAAAAAAAJAAkAAAACAAAAAAAJAA8AAAACAAAAAAAKAAEAAAACAAAAAAAKAAYAAAABAAAAAAAKAAgAAAABAAAAAAAKABIAAAACAAAAAAAKABMAAAACAAAAAAALAAMAAAACAAAAAAALAAQAAAABAAAAAAALAAkAAAACAAAAAAALABAAAAABAAAAAAALABIAAAABAAAAAAAMAA0AAAABAAAAAAAMAA8AAAACAAAAAAANAAAAAAACAAAAAAANAAsAAAABAAAAAAANABIAAAABAAAAAAAOAAMAAAACAAAAAAAOABEAAAACAAAAAAAOABIAAAACAAAAAAAPABAAAAABAAAAAAAPABIAAAABAAAAAAAPABMAAAABAAAAAAAQAAwAAAACAAAAAAAQAA0AAAABAAAAAAAQAA4AAAACAAAAAAAQAA8AAAACAAAAAAAQABMAAAACAAAAAAARAAYAAAACAAAAAAARAAcAAAACAAAAAAARAAwAAAABAAAAAAASAAAAAAABAAAAAAASABMAAAABAAAAAAATAAEAAAACAAAAAAATAAMAAAACAAAAAAATAAYAAAACAAAAAAAVAAgAAAACAAAAAAAVAAoAAAACAAAAAAAVAA4AAAABAAAAAAAVABEAAAABAAAAAAAVABIAAAABAAAAAAAWAAAAAAABAAAAAAAWAAQAAAACAAAAAAAWAAgAAAABAAAAAAAWAAoAAAACAAAAAAAXAAEAAAACAAAAAAAXAAMAAAABAAAAAAAXAAkAAAACAAAAAAAXAA0AAAACAAAAAAAYAAAAAAABAAAAAAAYAAoAAAACAAAAAAAYAAsAAAACAAAAAAAYABIAAAABAAAAAAAZAAAAAAACAAAAAAAZABAAAAABAAAAAAAZABIAAAABAAAAAAAZABMAAAACAAAAAAAaAA8AAAABAAAAAAAaABAAAAACAAAAAAAbAAgAAAABAAAAAAAbAAoAAAACAAAAAAAbAAsAAAABAAAAAAAbAAwAAAABAAAAAAAbAA4AAAABAAAAAAAbAA8AAAACAAAAAAAcABMAAAABAAAAAAAdAAAAAAABAAAAAAAdAAYAAAACAAAAAAAdAAwAAAACAAAAAAAdABAAAAACAAAAAAASAAQAAAABAAAAAAATAAQAAAABAAAAAAAYAAYAAAABAAAAAAAXAAYAAAABAAAAAAAXAAcAAAABAAAAAAAYAAcAAAABAAAAAAAYAAgAAAABAAAAAAAZAAgAAAABAAAAAAA=")
+tile_set = SubResource("TileSet_vhwmw")
+
+[node name="Land" type="TileMapLayer" parent="." unique_id=769859105 groups=["navigation_polygon_source_geometry_group"]]
+tile_map_data = PackedByteArray("AAARAAgAAAAAAAEAAAARAAkAAAAAAAIAAAARAAoAAAAAAAIAAAARAAsAAAAAAAMAAAAPAAgAAAAAAAEAAAAPAAkAAAAAAAIAAAAPAAoAAAAAAAIAAAAPAAsAAAAAAAMAAAATAAgAAAAAAAEAAAATAAkAAAAAAAIAAAATAAoAAAAAAAIAAAATAAsAAAAAAAMAAAATAAIAAQAJAAMAAAARAAIAAQAIAAMAAAARAAMAAQAIAAQAAAARAAQAAQAIAAQAAAARAAUAAQAIAAUAAAASAAIAAQAJAAMAAAASAAUAAQAKAAYAAAAUAAIAAQAJAAMAAAAUAAUAAQAIAAYAAAAVAAIAAQAKAAMAAAAVAAMAAQAKAAQAAAAVAAQAAQAKAAQAAAAVAAUAAQAKAAUAAAA=")
+tile_set = SubResource("TileSet_wvhbo")
+script = ExtResource("5_0k83q")
+
+[node name="level" type="Node2D" parent="." unique_id=1271238454]
+y_sort_enabled = true
+
+[node name="Static" type="Node2D" parent="level" unique_id=844751045]
+y_sort_enabled = true
+
+[node name="Trees" type="Node2D" parent="level/Static" unique_id=43253008]
+y_sort_enabled = true
+
+[node name="tree1" parent="level/Static/Trees" unique_id=354293590 instance=ExtResource("5_0f2sa")]
+position = Vector2(5, 8)
+
+[node name="tree2" parent="level/Static/Trees" unique_id=1247069780 instance=ExtResource("5_0f2sa")]
+position = Vector2(16, 0)
+
+[node name="tree3" parent="level/Static/Trees" unique_id=181835295 instance=ExtResource("5_0f2sa")]
+position = Vector2(27, 8)
+
+[node name="tree4" parent="level/Static/Trees" unique_id=1763547635 instance=ExtResource("5_0f2sa")]
+position = Vector2(5, 22)
+
+[node name="tree5" parent="level/Static/Trees" unique_id=1697550903 instance=ExtResource("5_0f2sa")]
+position = Vector2(16, 16)
+
+[node name="tree6" parent="level/Static/Trees" unique_id=742903483 instance=ExtResource("5_0f2sa")]
+position = Vector2(27, 21)
+
+[node name="tree7" parent="level/Static/Trees" unique_id=89464175 instance=ExtResource("5_0f2sa")]
+position = Vector2(39, 9)
+
+[node name="tree8" parent="level/Static/Trees" unique_id=17945089 instance=ExtResource("5_0f2sa")]
+position = Vector2(50, 1)
+
+[node name="tree9" parent="level/Static/Trees" unique_id=2141097894 instance=ExtResource("5_0f2sa")]
+position = Vector2(61, 9)
+
+[node name="tree10" parent="level/Static/Trees" unique_id=294117243 instance=ExtResource("5_0f2sa")]
+position = Vector2(39, 23)
+
+[node name="tree11" parent="level/Static/Trees" unique_id=230323933 instance=ExtResource("5_0f2sa")]
+position = Vector2(50, 17)
+
+[node name="tree12" parent="level/Static/Trees" unique_id=1791235251 instance=ExtResource("5_0f2sa")]
+position = Vector2(61, 22)
+
+[node name="tree13" parent="level/Static/Trees" unique_id=330421979 instance=ExtResource("5_0f2sa")]
+position = Vector2(39, 9)
+
+[node name="tree14" parent="level/Static/Trees" unique_id=769903607 instance=ExtResource("5_0f2sa")]
+position = Vector2(50, 1)
+
+[node name="tree15" parent="level/Static/Trees" unique_id=2104129461 instance=ExtResource("5_0f2sa")]
+position = Vector2(61, 9)
+
+[node name="tree16" parent="level/Static/Trees" unique_id=1296808042 instance=ExtResource("5_0f2sa")]
+position = Vector2(39, 23)
+
+[node name="tree17" parent="level/Static/Trees" unique_id=1599687260 instance=ExtResource("5_0f2sa")]
+position = Vector2(50, 17)
+
+[node name="tree18" parent="level/Static/Trees" unique_id=1471599982 instance=ExtResource("5_0f2sa")]
+position = Vector2(61, 22)
+
+[node name="tree19" parent="level/Static/Trees" unique_id=533520870 instance=ExtResource("5_0f2sa")]
+position = Vector2(19, 28)
+
+[node name="tree20" parent="level/Static/Trees" unique_id=2100674120 instance=ExtResource("5_0f2sa")]
+position = Vector2(30, 36)
+
+[node name="tree21" parent="level/Static/Trees" unique_id=534867275 instance=ExtResource("5_0f2sa")]
+position = Vector2(8, 50)
+
+[node name="tree22" parent="level/Static/Trees" unique_id=1226244723 instance=ExtResource("5_0f2sa")]
+position = Vector2(19, 44)
+
+[node name="tree23" parent="level/Static/Trees" unique_id=2101238656 instance=ExtResource("5_0f2sa")]
+position = Vector2(30, 49)
+
+[node name="tree24" parent="level/Static/Trees" unique_id=1053639275 instance=ExtResource("5_0f2sa")]
+position = Vector2(13, 55)
+
+[node name="tree25" parent="level/Static/Trees" unique_id=1393217145 instance=ExtResource("5_0f2sa")]
+position = Vector2(24, 63)
+
+[node name="tree26" parent="level/Static/Trees" unique_id=1742054980 instance=ExtResource("5_0f2sa")]
+position = Vector2(2, 77)
+
+[node name="tree27" parent="level/Static/Trees" unique_id=2020994298 instance=ExtResource("5_0f2sa")]
+position = Vector2(13, 71)
+
+[node name="tree28" parent="level/Static/Trees" unique_id=225934468 instance=ExtResource("5_0f2sa")]
+position = Vector2(24, 76)
+
+[node name="tree29" parent="level/Static/Trees" unique_id=873413556 instance=ExtResource("5_0f2sa")]
+position = Vector2(27, 82)
+
+[node name="tree30" parent="level/Static/Trees" unique_id=284569215 instance=ExtResource("5_0f2sa")]
+position = Vector2(38, 90)
+
+[node name="tree31" parent="level/Static/Trees" unique_id=379679663 instance=ExtResource("5_0f2sa")]
+position = Vector2(16, 104)
+
+[node name="tree32" parent="level/Static/Trees" unique_id=766992665 instance=ExtResource("5_0f2sa")]
+position = Vector2(27, 98)
+
+[node name="tree33" parent="level/Static/Trees" unique_id=1719993601 instance=ExtResource("5_0f2sa")]
+position = Vector2(38, 103)
+
+[node name="tree34" parent="level/Static/Trees" unique_id=1211457351 instance=ExtResource("5_0f2sa")]
+position = Vector2(27, 109)
+
+[node name="tree35" parent="level/Static/Trees" unique_id=1460848280 instance=ExtResource("5_0f2sa")]
+position = Vector2(38, 117)
+
+[node name="tree36" parent="level/Static/Trees" unique_id=771529638 instance=ExtResource("5_0f2sa")]
+position = Vector2(16, 131)
+
+[node name="tree37" parent="level/Static/Trees" unique_id=81772372 instance=ExtResource("5_0f2sa")]
+position = Vector2(27, 125)
+
+[node name="tree38" parent="level/Static/Trees" unique_id=1653326479 instance=ExtResource("5_0f2sa")]
+position = Vector2(38, 130)
+
+[node name="tree39" parent="level/Static/Trees" unique_id=974410768 instance=ExtResource("5_0f2sa")]
+position = Vector2(-25, 98)
+
+[node name="tree40" parent="level/Static/Trees" unique_id=574786689 instance=ExtResource("5_0f2sa")]
+position = Vector2(-14, 90)
+
+[node name="tree41" parent="level/Static/Trees" unique_id=196685963 instance=ExtResource("5_0f2sa")]
+position = Vector2(-3, 98)
+
+[node name="tree42" parent="level/Static/Trees" unique_id=1593907636 instance=ExtResource("5_0f2sa")]
+position = Vector2(-25, 112)
+
+[node name="tree43" parent="level/Static/Trees" unique_id=115314418 instance=ExtResource("5_0f2sa")]
+position = Vector2(-14, 106)
+
+[node name="tree44" parent="level/Static/Trees" unique_id=610813001 instance=ExtResource("5_0f2sa")]
+position = Vector2(-3, 111)
+
+[node name="tree45" parent="level/Static/Trees" unique_id=479648147 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 99)
+
+[node name="tree46" parent="level/Static/Trees" unique_id=704787497 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 91)
+
+[node name="tree47" parent="level/Static/Trees" unique_id=88525521 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 99)
+
+[node name="tree48" parent="level/Static/Trees" unique_id=2078475540 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 113)
+
+[node name="tree49" parent="level/Static/Trees" unique_id=1735871221 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 107)
+
+[node name="tree50" parent="level/Static/Trees" unique_id=2034447154 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 112)
+
+[node name="tree51" parent="level/Static/Trees" unique_id=1065807391 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 99)
+
+[node name="tree52" parent="level/Static/Trees" unique_id=198954513 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 91)
+
+[node name="tree53" parent="level/Static/Trees" unique_id=1204481575 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 99)
+
+[node name="tree54" parent="level/Static/Trees" unique_id=1672303276 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 113)
+
+[node name="tree55" parent="level/Static/Trees" unique_id=1707709353 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 107)
+
+[node name="tree56" parent="level/Static/Trees" unique_id=1051802009 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 112)
+
+[node name="tree57" parent="level/Static/Trees" unique_id=2015181933 instance=ExtResource("5_0f2sa")]
+position = Vector2(-11, 118)
+
+[node name="tree58" parent="level/Static/Trees" unique_id=1215019436 instance=ExtResource("5_0f2sa")]
+position = Vector2(0, 126)
+
+[node name="tree59" parent="level/Static/Trees" unique_id=1755458845 instance=ExtResource("5_0f2sa")]
+position = Vector2(-22, 140)
+
+[node name="tree60" parent="level/Static/Trees" unique_id=860171956 instance=ExtResource("5_0f2sa")]
+position = Vector2(-11, 134)
+
+[node name="tree61" parent="level/Static/Trees" unique_id=1709699636 instance=ExtResource("5_0f2sa")]
+position = Vector2(0, 139)
+
+[node name="tree62" parent="level/Static/Trees" unique_id=1083680319 instance=ExtResource("5_0f2sa")]
+position = Vector2(-17, 145)
+
+[node name="tree63" parent="level/Static/Trees" unique_id=1020545369 instance=ExtResource("5_0f2sa")]
+position = Vector2(-6, 153)
+
+[node name="tree64" parent="level/Static/Trees" unique_id=710737593 instance=ExtResource("5_0f2sa")]
+position = Vector2(-28, 167)
+
+[node name="tree65" parent="level/Static/Trees" unique_id=318735473 instance=ExtResource("5_0f2sa")]
+position = Vector2(-17, 161)
+
+[node name="tree66" parent="level/Static/Trees" unique_id=1858285168 instance=ExtResource("5_0f2sa")]
+position = Vector2(-6, 166)
+
+[node name="tree67" parent="level/Static/Trees" unique_id=645962650 instance=ExtResource("5_0f2sa")]
+position = Vector2(-3, 172)
+
+[node name="tree68" parent="level/Static/Trees" unique_id=142290450 instance=ExtResource("5_0f2sa")]
+position = Vector2(8, 180)
+
+[node name="tree69" parent="level/Static/Trees" unique_id=1919330220 instance=ExtResource("5_0f2sa")]
+position = Vector2(-14, 194)
+
+[node name="tree70" parent="level/Static/Trees" unique_id=1503730918 instance=ExtResource("5_0f2sa")]
+position = Vector2(-3, 188)
+
+[node name="tree71" parent="level/Static/Trees" unique_id=1022076437 instance=ExtResource("5_0f2sa")]
+position = Vector2(8, 193)
+
+[node name="tree72" parent="level/Static/Trees" unique_id=1408008655 instance=ExtResource("5_0f2sa")]
+position = Vector2(-3, 199)
+
+[node name="tree73" parent="level/Static/Trees" unique_id=1857684093 instance=ExtResource("5_0f2sa")]
+position = Vector2(8, 207)
+
+[node name="tree74" parent="level/Static/Trees" unique_id=1824403948 instance=ExtResource("5_0f2sa")]
+position = Vector2(-14, 221)
+
+[node name="tree75" parent="level/Static/Trees" unique_id=143645822 instance=ExtResource("5_0f2sa")]
+position = Vector2(-3, 215)
+
+[node name="tree76" parent="level/Static/Trees" unique_id=849891307 instance=ExtResource("5_0f2sa")]
+position = Vector2(8, 220)
+
+[node name="tree77" parent="level/Static/Trees" unique_id=2089656978 instance=ExtResource("5_0f2sa")]
+position = Vector2(-2, 157)
+
+[node name="tree78" parent="level/Static/Trees" unique_id=202445672 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 149)
+
+[node name="tree79" parent="level/Static/Trees" unique_id=663789677 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 157)
+
+[node name="tree80" parent="level/Static/Trees" unique_id=1296382427 instance=ExtResource("5_0f2sa")]
+position = Vector2(-2, 171)
+
+[node name="tree81" parent="level/Static/Trees" unique_id=1197342729 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 165)
+
+[node name="tree82" parent="level/Static/Trees" unique_id=1441372936 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 170)
+
+[node name="tree83" parent="level/Static/Trees" unique_id=2112056505 instance=ExtResource("5_0f2sa")]
+position = Vector2(32, 158)
+
+[node name="tree84" parent="level/Static/Trees" unique_id=391737611 instance=ExtResource("5_0f2sa")]
+position = Vector2(43, 150)
+
+[node name="tree85" parent="level/Static/Trees" unique_id=1646283124 instance=ExtResource("5_0f2sa")]
+position = Vector2(54, 158)
+
+[node name="tree89" parent="level/Static/Trees" unique_id=1930566721 instance=ExtResource("5_0f2sa")]
+position = Vector2(-13, 247)
+
+[node name="tree90" parent="level/Static/Trees" unique_id=2113221286 instance=ExtResource("5_0f2sa")]
+position = Vector2(-2, 239)
+
+[node name="tree91" parent="level/Static/Trees" unique_id=2113826172 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 247)
+
+[node name="tree92" parent="level/Static/Trees" unique_id=945952925 instance=ExtResource("5_0f2sa")]
+position = Vector2(32, 172)
+
+[node name="tree97" parent="level/Static/Trees" unique_id=803918284 instance=ExtResource("5_0f2sa")]
+position = Vector2(1, 199)
+
+[node name="tree98" parent="level/Static/Trees" unique_id=679467581 instance=ExtResource("5_0f2sa")]
+position = Vector2(12, 193)
+
+[node name="tree99" parent="level/Static/Trees" unique_id=1572543536 instance=ExtResource("5_0f2sa")]
+position = Vector2(23, 198)
+
+[node name="tree100" parent="level/Static/Trees" unique_id=1859792052 instance=ExtResource("5_0f2sa")]
+position = Vector2(6, 204)
+
+[node name="tree101" parent="level/Static/Trees" unique_id=370394475 instance=ExtResource("5_0f2sa")]
+position = Vector2(17, 212)
+
+[node name="tree102" parent="level/Static/Trees" unique_id=1692759179 instance=ExtResource("5_0f2sa")]
+position = Vector2(-5, 226)
+
+[node name="tree103" parent="level/Static/Trees" unique_id=1362569186 instance=ExtResource("5_0f2sa")]
+position = Vector2(6, 220)
+
+[node name="tree104" parent="level/Static/Trees" unique_id=1926379783 instance=ExtResource("5_0f2sa")]
+position = Vector2(17, 225)
+
+[node name="tree105" parent="level/Static/Trees" unique_id=2094871845 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 231)
+
+[node name="tree106" parent="level/Static/Trees" unique_id=1659452993 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 239)
+
+[node name="tree107" parent="level/Static/Trees" unique_id=871642711 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 253)
+
+[node name="tree108" parent="level/Static/Trees" unique_id=794240229 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 247)
+
+[node name="tree109" parent="level/Static/Trees" unique_id=1709904286 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 252)
+
+[node name="tree110" parent="level/Static/Trees" unique_id=288678269 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 258)
+
+[node name="tree111" parent="level/Static/Trees" unique_id=1599549970 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 266)
+
+[node name="tree112" parent="level/Static/Trees" unique_id=388504371 instance=ExtResource("5_0f2sa")]
+position = Vector2(9, 280)
+
+[node name="tree115" parent="level/Static/Trees" unique_id=839266059 instance=ExtResource("5_0f2sa")]
+position = Vector2(426, 13)
+
+[node name="tree116" parent="level/Static/Trees" unique_id=1715423574 instance=ExtResource("5_0f2sa")]
+position = Vector2(437, 7)
+
+[node name="tree117" parent="level/Static/Trees" unique_id=1145853229 instance=ExtResource("5_0f2sa")]
+position = Vector2(448, 12)
+
+[node name="tree118" parent="level/Static/Trees" unique_id=1309573227 instance=ExtResource("5_0f2sa")]
+position = Vector2(431, 18)
+
+[node name="tree119" parent="level/Static/Trees" unique_id=1067895773 instance=ExtResource("5_0f2sa")]
+position = Vector2(442, 26)
+
+[node name="tree120" parent="level/Static/Trees" unique_id=1182603913 instance=ExtResource("5_0f2sa")]
+position = Vector2(420, 40)
+
+[node name="tree121" parent="level/Static/Trees" unique_id=1831159498 instance=ExtResource("5_0f2sa")]
+position = Vector2(431, 34)
+
+[node name="tree122" parent="level/Static/Trees" unique_id=554618818 instance=ExtResource("5_0f2sa")]
+position = Vector2(442, 39)
+
+[node name="tree123" parent="level/Static/Trees" unique_id=1998498670 instance=ExtResource("5_0f2sa")]
+position = Vector2(445, 45)
+
+[node name="tree124" parent="level/Static/Trees" unique_id=673492778 instance=ExtResource("5_0f2sa")]
+position = Vector2(456, 53)
+
+[node name="tree125" parent="level/Static/Trees" unique_id=1691957907 instance=ExtResource("5_0f2sa")]
+position = Vector2(434, 67)
+
+[node name="tree126" parent="level/Static/Trees" unique_id=1281705273 instance=ExtResource("5_0f2sa")]
+position = Vector2(445, 61)
+
+[node name="tree127" parent="level/Static/Trees" unique_id=838996113 instance=ExtResource("5_0f2sa")]
+position = Vector2(456, 66)
+
+[node name="tree128" parent="level/Static/Trees" unique_id=1467625656 instance=ExtResource("5_0f2sa")]
+position = Vector2(445, 72)
+
+[node name="tree129" parent="level/Static/Trees" unique_id=1385835391 instance=ExtResource("5_0f2sa")]
+position = Vector2(456, 80)
+
+[node name="tree130" parent="level/Static/Trees" unique_id=1657761086 instance=ExtResource("5_0f2sa")]
+position = Vector2(440, 88)
+
+[node name="tree131" parent="level/Static/Trees" unique_id=2129432728 instance=ExtResource("5_0f2sa")]
+position = Vector2(390, -22)
+
+[node name="tree132" parent="level/Static/Trees" unique_id=1508724708 instance=ExtResource("5_0f2sa")]
+position = Vector2(401, -28)
+
+[node name="tree133" parent="level/Static/Trees" unique_id=1906477451 instance=ExtResource("5_0f2sa")]
+position = Vector2(412, -23)
+
+[node name="tree134" parent="level/Static/Trees" unique_id=566729544 instance=ExtResource("5_0f2sa")]
+position = Vector2(395, -17)
+
+[node name="tree135" parent="level/Static/Trees" unique_id=2146463578 instance=ExtResource("5_0f2sa")]
+position = Vector2(406, -9)
+
+[node name="tree136" parent="level/Static/Trees" unique_id=80869562 instance=ExtResource("5_0f2sa")]
+position = Vector2(384, 5)
+
+[node name="tree137" parent="level/Static/Trees" unique_id=1848230808 instance=ExtResource("5_0f2sa")]
+position = Vector2(395, -1)
+
+[node name="tree138" parent="level/Static/Trees" unique_id=266547362 instance=ExtResource("5_0f2sa")]
+position = Vector2(406, 4)
+
+[node name="tree139" parent="level/Static/Trees" unique_id=1148279099 instance=ExtResource("5_0f2sa")]
+position = Vector2(409, 10)
+
+[node name="tree140" parent="level/Static/Trees" unique_id=737675567 instance=ExtResource("5_0f2sa")]
+position = Vector2(420, 18)
+
+[node name="tree141" parent="level/Static/Trees" unique_id=380361762 instance=ExtResource("5_0f2sa")]
+position = Vector2(398, 32)
+
+[node name="tree142" parent="level/Static/Trees" unique_id=1556183821 instance=ExtResource("5_0f2sa")]
+position = Vector2(409, 26)
+
+[node name="tree143" parent="level/Static/Trees" unique_id=1988325685 instance=ExtResource("5_0f2sa")]
+position = Vector2(420, 31)
+
+[node name="tree144" parent="level/Static/Trees" unique_id=1593404646 instance=ExtResource("5_0f2sa")]
+position = Vector2(409, 37)
+
+[node name="tree145" parent="level/Static/Trees" unique_id=1636298022 instance=ExtResource("5_0f2sa")]
+position = Vector2(420, 45)
+
+[node name="tree146" parent="level/Static/Trees" unique_id=422056804 instance=ExtResource("5_0f2sa")]
+position = Vector2(398, 59)
+
+[node name="tree113" parent="level/Static/Trees" unique_id=573329974 instance=ExtResource("5_0f2sa")]
+position = Vector2(20, 274)
+
+[node name="tree114" parent="level/Static/Trees" unique_id=1603515899 instance=ExtResource("5_0f2sa")]
+position = Vector2(31, 279)
+
+[node name="house" parent="level/Static" unique_id=21025963 instance=ExtResource("6_sur3v")]
+position = Vector2(216, 96)
+
+[node name="Plants" type="Node2D" parent="level/Static" unique_id=193847066]
+
+[node name="waterBucket" parent="level/Static" unique_id=92657982 instance=ExtResource("8_ta4i7")]
+position = Vector2(216, 144)
+
+[node name="WaterContainer" parent="level/Static" unique_id=107477045 instance=ExtResource("9_rqtgi")]
+position = Vector2(128, 184)
+
+[node name="Animals" type="Node2D" parent="level" unique_id=2113591457]
+
+[node name="base_animal" parent="level/Animals" unique_id=209559319 instance=ExtResource("8_0k83q")]
+position = Vector2(301, 65)
+
+[node name="Player" parent="level" unique_id=86314786 instance=ExtResource("7_4rblm")]
+position = Vector2(240, 192)
+
+[node name="animalRegion2D" type="NavigationRegion2D" parent="level" unique_id=1594537583 groups=["animalRegion"]]
+navigation_polygon = SubResource("NavigationPolygon_wvhbo")
