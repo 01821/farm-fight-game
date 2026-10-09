@@ -149,6 +149,7 @@ func take_damage(amount: int) -> void:
 	if hp <= 0:
 		return
 	hp = maxi(0, hp - amount)
+	Sfx.play("hurt")
 	print("[玩家] 掉血 ", amount, "，剩 ", hp, "/", MAX_HP)
 	if hp <= 0:
 		_die()

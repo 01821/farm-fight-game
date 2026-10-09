@@ -20,6 +20,7 @@ func _process(_delta: float) -> void:
 		return
 	if player.money >= GOLD_GOAL:
 		goal_reached = true
+		Sfx.play("goal")
 		print("[目标] 攒够 ", GOLD_GOAL, " 金，谷仓建成了！")
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -83,6 +84,7 @@ func attack() -> bool:
 		print("[战斗] 挥空了，附近没有野猪")
 		return false
 	print("[战斗] 砍中 ", hit, " 只野猪")
+	Sfx.play("hit")
 	return true
 
 func to_save_data() -> Dictionary:

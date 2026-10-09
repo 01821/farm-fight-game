@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/Global/sfx.gd" id="1_sfx"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/plant.wav" id="2_plant"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/water.wav" id="3_water"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/harvest.wav" id="4_harvest"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/coin.wav" id="5_coin"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/buy.wav" id="6_buy"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/hit.wav" id="7_hit"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/hurt.wav" id="8_hurt"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/nightfall.wav" id="9_night"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/dawn.wav" id="10_dawn"]
+[ext_resource type="AudioStreamWAV" path="res://Assets/sounds/goal.wav" id="11_goal"]
+
+[node name="Sfx" type="Node"]
+script = ExtResource("1_sfx")
+
+[node name="Plant" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_plant")
+volume_db = -9.0
+
+[node name="Water" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_water")
+volume_db = -12.0
+
+[node name="Harvest" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_harvest")
+volume_db = -9.0
+
+[node name="Coin" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_coin")
+volume_db = -8.0
+
+[node name="Buy" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6_buy")
+volume_db = -10.0
+
+[node name="Hit" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7_hit")
+volume_db = -7.0
+
+[node name="Hurt" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("8_hurt")
+volume_db = -6.0
+
+[node name="Nightfall" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_night")
+volume_db = -10.0
+
+[node name="Dawn" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("10_dawn")
+volume_db = -12.0
+
+[node name="Goal" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("11_goal")
+volume_db = -6.0

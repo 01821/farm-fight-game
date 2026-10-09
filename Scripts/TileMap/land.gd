@@ -37,6 +37,7 @@ func try_plant_at(tile_pos: Vector2i) -> bool:
 	var type_id: int = player.seed_type
 	player.take_seed()
 	spawn_plant(tile_pos, type_id)
+	Sfx.play("plant")
 	print("[农场] 种下 ", CropData.name_of(type_id), "，还剩 ", player.seed_count(type_id), " 粒")
 	return true
 
@@ -69,6 +70,7 @@ func try_water_at(tile_pos: Vector2i) -> bool:
 		print("[农场] 这株刚浇过，等它长一级")
 		return false
 	player.consume_water()
+	Sfx.play("water")
 	return true
 
 func try_harvest_at(tile_pos: Vector2i) -> bool:
@@ -83,6 +85,7 @@ func try_harvest_at(tile_pos: Vector2i) -> bool:
 	plants.erase(tile_pos)
 	plant.queue_free()
 	player.add_harvest(type_id)
+	Sfx.play("harvest")
 	print("[农场] 收获 ", CropData.name_of(type_id), "！篮子里共 ", player.basket_total(), " 个")
 	return true
 

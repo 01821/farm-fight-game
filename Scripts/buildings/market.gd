@@ -25,6 +25,7 @@ func buy_seed(player: Player) -> bool:
 		return false
 	player.money -= price
 	player.add_seed(type_id, 1)
+	Sfx.play("buy")
 	print("[商店] 买下 1 粒 ", CropData.name_of(type_id), " 种子，-", price,
 		" 金，剩 ", player.money, "，该种子共 ", player.seed_count(type_id), " 粒")
 	return true
@@ -47,6 +48,7 @@ func sell_crops(player: Player) -> bool:
 		print("[商店] 篮子是空的，先去收获作物")
 		return false
 	player.money += total
+	Sfx.play("coin")
 	print("[商店] 卖出 ", detail, "，+", total, " 金，共 ", player.money)
 	return true
 

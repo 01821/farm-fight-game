@@ -11,7 +11,7 @@
 | 项目名 | `farmAndFightGame` |
 | 引擎 | **Godot 4.7.1-stable**（Windows 版，`E:/godot/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64.exe`） |
 | 主场景 | `res://Scenes/base_level.tscn`（`uid://btccb47s76sxj`） |
-| 自动加载 | `Level` → `res://Scripts/Global/Level.gd`（缓存 `level/animalRegion2D` 供动物导航） |
+| 自动加载 | `Level` → `res://Scripts/Global/Level.gd`（缓存 `level/animalRegion2D` 供动物导航）<br>`Sfx` → `res://Scenes/global/sfx.tscn`（音效，全局 `Sfx.play("hit")`） |
 | 渲染 | Forward Plus；Windows 驱动 `d3d12` |
 | 像素风 | 视口 400×300，窗口 1600×1200；`canvas_items` + `expand` + `integer` 缩放；纹理过滤 = nearest |
 | 版本控制 | git，`main` 分支；远程 `origin` = https://github.com/01821/farm-fight-game.git（**公开仓库**）；`.godot/`、`/android/` 已忽略 |
@@ -23,9 +23,11 @@
 ```
 Assets/kenney_tiny-{dungeon,farm,town}/   第三方素材（CC0，Kenney）
 Assets/fonts/                             Fusion Pixel Font 12px 简体（OFL），UI 中文字体
+Assets/sounds/                            音效 WAV，由 Tools/gen_sfx.gd 合成（可重跑）
 Scenes/                                   所有场景，按类型分子目录
   base_level.tscn                         ← 真正的主场景
   game.tscn                               ⚠️ 空壳遗留，只有一行 Node2D
+  global/sfx.tscn                         音效单例场景（内含 10 个预建的 AudioStreamPlayer）
   character/player.tscn
   animals/base_animal.tscn                温顺的农场动物
   animals/boar.tscn                       野猪（敌人），贴图取自 kenney_tiny-dungeon
@@ -36,6 +38,8 @@ Scripts/
   Global/DayCycle.gd                      class_name DayCycle：昼夜循环
   Global/PestSpawner.gd                   class_name PestSpawner：夜晚放野猪
   Global/SaveSystem.gd                    class_name SaveSystem：存档 / 读档
+  Global/sfx.gd                           自动加载单例 Sfx：播放音效
+  ../Tools/gen_sfx.gd                     一次性音效合成器（不在 Scripts 下）
   Characters/{character,player,base_animal}.gd
   Characters/boar.gd                      class_name Boar：野猪
   State/{State,state_machine}.gd          状态机基础设施
@@ -218,6 +222,29 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - 存档带 `version` 字段；**版本不符或 JSON 损坏时拒绝读取并给提示，不会崩**。
 - 各系统通过 `to_save_data()` / `apply_save_data()` 参与存档；以后新增系统照这个模式接一行即可。
 
+### 音效
+
+自动加载单例 `Sfx`（`Scenes/global/sfx.tscn`），任何脚本直接 `Sfx.play("hit")`。
+
+| 音效名 | 触发点 | 时长 |
+|---|---|---|
+| `plant` | 播种成功 | 0.09s |
+| `water` | 浇水成功 | 0.20s |
+| `harvest` | 收获成功 | 0.17s |
+| `coin` | 卖出作物 | 0.18s |
+| `buy` | 买下种子 | 0.17s |
+| `hit` | 砍中野猪 | 0.10s |
+| `hurt` | 玩家掉血 | 0.26s |
+| `nightfall` | 入夜 | 0.75s |
+| `dawn` | 天亮 | 0.55s |
+| `goal` | 达成目标 | 0.66s |
+
+- **10 个 `AudioStreamPlayer` 全部预建在 `sfx.tscn` 里**，运行时只调 `play()`，不创建节点。
+- 音效是 `Tools/gen_sfx.gd` **用代码合成的**（短正弦/噪声包络），不是下载素材：
+  零版权顾虑、总共约 140KB、参数改一行重跑即可。
+  **换成真素材时只要文件名不变，代码一行都不用改。**
+- ⚠️ 这些是「提示音」级别的东西，不是有审美的音效设计。好不好听要人耳判断。
+
 ### 战斗
 
 **野猪（Boar）** `Scripts/Characters/boar.gd`
@@ -324,6 +351,12 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
   所有不测存档的测试，都要在第一帧之前设 `auto_load = false` 和 `auto_save_on_dawn = false`。
 - ⚠️ 跑主场景冒烟测试前建议先删掉 `user://farm_save.json`，否则会从存档的天数继续，
   冒烟测试就不确定了。
+- ⚠️ headless 退出时会打印
+  `N ObjectDB instances were leaked at exit` / `M resources still in use at exit`。
+  **这是无害的**，已用 `--verbose` 查明：泄漏的是**最后播放的那几个** `AudioStreamPlaybackWAV`
+  （引用计数 1），之前的播放都正常释放，所以**不随游玩时长增长**。哑音频驱动下停掉的播放对象
+  没人回收，真机有声卡时不会有。只在退出瞬间打印一次，GUI 程序没有控制台，玩家看不到。
+  （`Sfx.stop_all()` 消不掉它，别在这上面浪费时间。）
 - `game.tscn` 是空壳；`tree_2.tscn` / `tree_3.tscn` 没被任何场景引用。
 - 动物状态里 `speed` 在 `Update()` 每帧重新随机——速度一直在抖，疑似写错位置（野猪没这问题）。
 - ⚠️ **测试里必须手动补 `Level.animalRegion`**：测试场景不是主场景，自动加载 `Level` 的 `_ready`
@@ -345,6 +378,7 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **目标**：攒够 300 金建成谷仓
 - **存档**：天亮自动存、启动自动读，F5/F9/F10 手动控制
 - **多种作物**：5 种，按 1-5 切换；越贵单位时间收益越高
+- **音效**：10 个由代码合成的提示音，覆盖种植 / 浇水 / 收获 / 买卖 / 战斗 / 昼夜 / 目标
 - 水壶容量与水源自动补水
 - HUD：**中文界面**，显示 金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
@@ -392,11 +426,14 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 5) 存档（36 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_save.tscn --quit-after 4000 2>&1 | Out-String
 
-# 6) 跑主场景 100 秒（约 2.2 个昼夜），抓运行时错误
+# 6) 音效（33 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_sfx.tscn --quit-after 3000 2>&1 | Out-String
+
+# 7) 跑主场景 100 秒（约 2.2 个昼夜），抓运行时错误
 & $godot --headless --path . --fixed-fps 60 --quit-after 6000 2>&1 | Out-String
 ```
 
-合计 169 项断言。
+合计 202 项断言。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -426,4 +463,5 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 6 | 昼夜循环 + 夜晚成群来袭 + 目标 | ✅ |
 | 7 | 存档系统（天亮自动存 / 启动自动读 / F5 F9 F10） | ✅ |
 | 8 | 多种作物（5 种，1-5 切换，价格与生长时间各不相同） | ✅ |
-| 9 | 打磨：音效、攻击动画、击退、胜利反馈 | ⬜ 下一步 |
+| 9 | **音效**（代码合成 10 个提示音 + 预建 AudioStreamPlayer 单例） | ✅ |
+| 10 | 打磨：攻击动画、击退、胜利反馈、清理调试标签 | ⬜ 下一步 |

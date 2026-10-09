@@ -62,9 +62,11 @@ func _advance(delta: float) -> void:
 		is_night = night_now
 		if is_night:
 			print("[时间] 第 ", day, " 天入夜了，野猪要来了（每波 ", wave_size(), " 只）")
+			Sfx.play("nightfall")
 			night_started.emit(day)
 		else:
 			print("[时间] 第 ", day, " 天天亮了")
+			Sfx.play("dawn")
 			day_started.emit(day)
 
 func _update_tint(delta: float) -> void:
