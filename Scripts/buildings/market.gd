@@ -9,6 +9,7 @@ class_name Market extends Node2D
 @onready var area: Area2D = $InteractionArea
 
 var _player_inside: int = 0
+var _cycle: DayCycle
 
 func _ready() -> void:
 	area.body_entered.connect(_on_body_entered)
@@ -17,9 +18,23 @@ func _ready() -> void:
 func is_player_inside() -> bool:
 	return _player_inside > 0
 
+## 作物按天数解锁，商店只卖已经解锁的
+func current_day() -> int:
+	if _cycle == null:
+		_cycle = get_tree().get_first_node_in_group("day_cycle") as DayCycle
+	return _cycle.day if _cycle != null else 1
+
+## 当前种子实际要花多少钱（商人专精打折）
+func seed_price_now(type_id: int) -> int:
+	return int(round(float(CropData.seed_price(type_id)) * Progression.seed_price_multiplier()))
+
 func buy_seed(player: Player) -> bool:
 	var type_id: int = player.seed_type
-	var price: int = CropData.seed_price(type_id)
+	if not CropData.is_unlocked(type_id, current_day()):
+		print("[商店] ", CropData.name_of(type_id), " 还没解锁（第 ",
+			CropData.min_day_of(type_id), " 天开始有）")
+		return false
+	var price: int = seed_price_now(type_id)
 	if player.money < price:
 		print("[商店] 金币不够（", CropData.name_of(type_id), " 种子要 ", price, "，只有 ", player.money, "）")
 		return false
@@ -31,14 +46,14 @@ func buy_seed(player: Player) -> bool:
 	return true
 
 func sell_crops(player: Player) -> bool:
-	var total: int = 0
+	var base_total: int = 0
 	var count: int = 0
 	var detail: String = ""
 	for type_id in range(player.harvested.size()):
 		var n: int = player.harvested[type_id]
 		if n <= 0:
 			continue
-		total += n * CropData.sell_price(type_id)
+		base_total += n * CropData.sell_price(type_id)
 		count += n
 		if detail != "":
 			detail += "、"
@@ -47,9 +62,13 @@ func sell_crops(player: Player) -> bool:
 	if count <= 0:
 		print("[商店] 篮子是空的，先去收获作物")
 		return false
+	var total: int = int(round(float(base_total) * Progression.sell_multiplier()))
 	player.money += total
+	# 经营经验：每卖一次至少 +1，之后每 10 金再 +1
+	Progression.add_xp(Progression.Skill.TRADE, maxi(1, total / 10))
 	Sfx.play("coin")
-	print("[商店] 卖出 ", detail, "，+", total, " 金，共 ", player.money)
+	var bonus: String = "" if total == base_total else "（原价 %d，专精加成后 %d）" % [base_total, total]
+	print("[商店] 卖出 ", detail, "，+", total, " 金", bonus, "，共 ", player.money)
 	return true
 
 func _on_body_entered(body: Node2D) -> void:

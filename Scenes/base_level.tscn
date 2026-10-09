@@ -949,37 +949,72 @@ navigation_polygon = SubResource("NavigationPolygon_wvhbo")
 script = ExtResource("10_hud")
 
 [node name="Backdrop" type="ColorRect" parent="HUD"]
-offset_right = 320.0
+offset_right = 350.0
 offset_bottom = 76.0
 color = Color(0, 0, 0, 0.45)
 
 [node name="InfoLabel" type="Label" parent="HUD"]
 offset_left = 6.0
 offset_top = 3.0
-offset_right = 318.0
+offset_right = 348.0
 offset_bottom = 21.0
 theme_override_font_sizes/font_size = 12
 
 [node name="FarmLabel" type="Label" parent="HUD"]
 offset_left = 6.0
 offset_top = 21.0
-offset_right = 318.0
+offset_right = 348.0
 offset_bottom = 39.0
 theme_override_font_sizes/font_size = 12
 
 [node name="HeldLabel" type="Label" parent="HUD"]
 offset_left = 6.0
 offset_top = 39.0
-offset_right = 318.0
+offset_right = 348.0
 offset_bottom = 57.0
 theme_override_font_sizes/font_size = 12
 
 [node name="KeyLabel" type="Label" parent="HUD"]
 offset_left = 6.0
 offset_top = 57.0
-offset_right = 318.0
+offset_right = 348.0
 offset_bottom = 75.0
 theme_override_font_sizes/font_size = 12
+
+[node name="PerkBackdrop" type="ColorRect" parent="HUD"]
+visible = false
+offset_left = 30.0
+offset_top = 96.0
+offset_right = 370.0
+offset_bottom = 176.0
+color = Color(0.05, 0.05, 0.08, 0.88)
+
+[node name="PerkTitle" type="Label" parent="HUD"]
+visible = false
+offset_left = 38.0
+offset_top = 102.0
+offset_right = 362.0
+offset_bottom = 122.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="PerkOption1" type="Label" parent="HUD"]
+visible = false
+offset_left = 38.0
+offset_top = 126.0
+offset_right = 362.0
+offset_bottom = 148.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="PerkOption2" type="Label" parent="HUD"]
+visible = false
+offset_left = 38.0
+offset_top = 148.0
+offset_right = 362.0
+offset_bottom = 170.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
 
 [node name="BannerBackdrop" type="ColorRect" parent="HUD"]
 visible = false

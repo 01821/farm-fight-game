@@ -200,14 +200,20 @@ func _ready() -> void:
 
 	print("--- 击杀赏金 ---")
 	_player.money = 0
-	_player.global_position = bat.global_position
 	_player.active_item = Player.Item.SWORD
+	# 先等冷却结束，**再**瞬移到蝙蝠身上 —— 蝙蝠速度 66，先站过去等 0.5 秒它早跑出范围了
 	await get_tree().create_timer(0.5).timeout
+	_player.global_position = bat.global_position
 	_check("蝙蝠 1 血一刀带走", _ctl.use_held_item() == true)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_check("击杀拿到赏金 2 金", _player.money == 2)
 	_check("蝙蝠已消失", _count_pests() == 0)
+
+	# 清场，免得上一段有残留影响后面的计数
+	for n in get_tree().get_nodes_in_group("pest"):
+		(n as Pest).queue_free()
+	await get_tree().process_frame
 
 	print("--- 刀光动画 ---")
 	_player.global_position = arena

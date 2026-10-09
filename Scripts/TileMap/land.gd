@@ -47,7 +47,8 @@ func spawn_plant(tile_pos: Vector2i, type_id: int, extra: Dictionary = {}) -> Ba
 	var plant: BasePlant = BASE_PLANT.instantiate()
 	plant.plantType = type_id
 	# growTime 必须在 add_child 之前设：_ready 会拿它去设 Timer
-	plant.growTime = CropData.grow_time(type_id)
+	# 育种家专精会缩短生长时间
+	plant.growTime = CropData.grow_time(type_id) * Progression.grow_time_multiplier()
 	plants_node.add_child(plant)
 	plant.global_position = to_global(map_to_local(tile_pos))
 	if not extra.is_empty():
@@ -70,8 +71,26 @@ func try_water_at(tile_pos: Vector2i) -> bool:
 		print("[农场] 这株刚浇过，等它长一级")
 		return false
 	player.consume_water()
+	# 园丁：顺手把周围一格也浇了（不额外扣水）
+	var r: int = Progression.water_radius()
+	var extra: int = 0
+	for dx in range(-r, r + 1):
+		for dy in range(-r, r + 1):
+			if dx == 0 and dy == 0:
+				continue
+			if water_plant_at(tile_pos + Vector2i(dx, dy)):
+				extra += 1
+	if extra > 0:
+		print("[农场] 园丁顺手浇了周围 ", extra, " 株")
 	Sfx.play("water")
 	return true
+
+## 只给某格作物浇水，不扣玩家的水壶。返回是否浇上了。
+func water_plant_at(tile_pos: Vector2i) -> bool:
+	var p: BasePlant = plants.get(tile_pos)
+	if p == null or not is_instance_valid(p):
+		return false
+	return p.water()
 
 func try_harvest_at(tile_pos: Vector2i) -> bool:
 	var plant: BasePlant = plants.get(tile_pos)
@@ -85,8 +104,14 @@ func try_harvest_at(tile_pos: Vector2i) -> bool:
 	plants.erase(tile_pos)
 	plant.queue_free()
 	player.add_harvest(type_id)
+	var got: int = 1
+	# 囤积者：有概率多收一株
+	if randf() < Progression.harvest_bonus_chance():
+		player.add_harvest(type_id)
+		got = 2
+	Progression.add_xp(Progression.Skill.FARM, 1)
 	Sfx.play("harvest")
-	print("[农场] 收获 ", CropData.name_of(type_id), "！篮子里共 ", player.basket_total(), " 个")
+	print("[农场] 收获 ", CropData.name_of(type_id), " x", got, "！篮子里共 ", player.basket_total(), " 个")
 	return true
 
 ## 作物被野猪啃掉（或其它方式损毁）
@@ -104,10 +129,7 @@ func destroy_plant_at(tile_pos: Vector2i) -> bool:
 func water_all() -> int:
 	var n: int = 0
 	for tile in plants.keys():
-		var p: BasePlant = plants[tile]
-		if p == null or not is_instance_valid(p):
-			continue
-		if p.water():
+		if water_plant_at(tile):
 			n += 1
 	return n
 

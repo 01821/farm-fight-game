@@ -58,6 +58,7 @@ func save_game() -> bool:
 		"land": land.to_save_data(),
 		"progress": controller.to_save_data(),
 		"achievements": achievements.to_save_data() if achievements != null else {},
+		"progression": Progression.to_save_data(),
 	}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f == null:
@@ -91,6 +92,8 @@ func load_game() -> bool:
 	land.apply_save_data(data.get("land", {}))
 	player.apply_save_data(data.get("player", {}))
 	controller.apply_save_data(data.get("progress", {}))
+	# 成长系统要在玩家之前恢复：玩家的最大生命依赖铁壁专精
+	Progression.apply_save_data(data.get("progression", {}))
 	if achievements != null:
 		achievements.apply_save_data(data.get("achievements", {}))
 	print("[存档] 已读取（第 ", cycle.day, " 天，", player.money, " 金）")

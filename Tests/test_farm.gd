@@ -11,6 +11,7 @@ var _land: FarmLand
 var _player: Player
 var _market: Market
 var _ctl: FarmController
+var _cycle: DayCycle
 
 func _check(label: String, ok: bool) -> void:
 	if ok:
@@ -41,6 +42,7 @@ func _ready() -> void:
 	_player = _level.get_node("level/Player")
 	_market = _level.get_node("level/Static/Market")
 	_ctl = _level.get_node("FarmController")
+	_cycle = _level.get_node("DayCycle")
 
 	# 测试场景不是主场景，自动加载 Level 拿不到导航区域，这里补上以免动物报错
 	var region: NavigationRegion2D = _level.get_node("level/animalRegion2D")
@@ -171,6 +173,15 @@ func _ready() -> void:
 	_check("钱没变", _player.money == 1)
 	_player.money = 22
 
+	print("--- 作物按天数解锁 ---")
+	_check("第 1 天只有胡萝卜", CropData.unlocked_kinds(1) == [0])
+	_check("第 2 天解锁紫甘蓝", CropData.unlocked_kinds(2) == [0, 1])
+	_check("第 3 天有 3 种", CropData.unlocked_kinds(3).size() == 3)
+	_check("玉米要第 3 天", CropData.min_day_of(2) == 3)
+	_check("第 1 天玉米没解锁", CropData.is_unlocked(2, 1) == false)
+	_check("第 3 天玉米已解锁", CropData.is_unlocked(2, 3) == true)
+	_check("第 3 天时下一个待解锁的是番茄", CropData.next_locked(3) == 3)
+
 	print("--- 多种作物 ---")
 	_check("切到玉米（id 2）", _player.select_seed_type(2) == true)
 	_check("当前作物名 = 玉米", _player.crop_name() == "玉米")
@@ -185,7 +196,9 @@ func _ready() -> void:
 	_move_to(_market.global_position)
 	for i in range(12):
 		await get_tree().physics_frame
-	_check("在商店买到玉米种子", _use_as(Player.Item.SEED) == true)
+	_check("第 1 天商店不卖玉米种子", _use_as(Player.Item.SEED) == false)
+	_cycle.day = 3
+	_check("第 3 天就能买了", _use_as(Player.Item.SEED) == true)
 	_check("金币 100-8 = 92", _player.money == 92)
 	_check("玉米种子 = 1", _player.seed_count(2) == 1)
 

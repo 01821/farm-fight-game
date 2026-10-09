@@ -11,7 +11,7 @@
 | 项目名 | `farmAndFightGame` |
 | 引擎 | **Godot 4.7.1-stable**（Windows 版，`E:/godot/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64.exe`） |
 | 主场景 | `res://Scenes/base_level.tscn`（`uid://btccb47s76sxj`） |
-| 自动加载 | `Level` → `res://Scripts/Global/Level.gd`（缓存 `level/animalRegion2D` 供动物导航）<br>`Sfx` → `res://Scenes/global/sfx.tscn`（音效，全局 `Sfx.play("hit")`） |
+| 自动加载 | `Level` → `res://Scripts/Global/Level.gd`（缓存 `level/animalRegion2D` 供动物导航）<br>`Sfx` → `res://Scenes/global/sfx.tscn`（音效，全局 `Sfx.play("hit")`）<br>`Progression` → `res://Scripts/Global/Progression.gd`（成长与专精，全局 `Progression.add_xp(...)`） |
 | 渲染 | Forward Plus；Windows 驱动 `d3d12` |
 | 像素风 | 视口 400×300，窗口 1600×1200；`canvas_items` + `expand` + `integer` 缩放；纹理过滤 = nearest |
 | 版本控制 | git，`main` 分支；远程 `origin` = https://github.com/01821/farm-fight-game.git（**公开仓库**）；`.godot/`、`/android/` 已忽略 |
@@ -41,6 +41,7 @@ Scripts/
   Global/Weather.gd                       class_name Weather：天气（雨天自动浇灌）
   Global/Achievements.gd                  class_name Achievements：成就
   Global/sfx.gd                           自动加载单例 Sfx：播放音效
+  Global/Progression.gd                   自动加载单例 Progression：三系成长与专精
   ../Tools/gen_sfx.gd                     一次性音效合成器（不在 Scripts 下）
   ../Tools/analyze_crops.gd               一次性像素分析：判定作物阶段列映射
   Characters/{character,player,base_animal}.gd
@@ -104,6 +105,7 @@ baseLevel (Node2D)
 │   ├── Backdrop / InfoLabel / FarmLabel / HeldLabel / KeyLabel（四行状态）
 │   └── BannerBackdrop + Banner（达成目标时亮出的横幅，平时 visible = false）
 │   └── ToastBackdrop + Toast（成就提示条，底部居中，默认隐藏）
+│   └── PerkBackdrop + PerkTitle + PerkOption1/2（升级二选一面板，默认隐藏）
 ├── FarmController (Node)               script = farm_controller.gd ← F 键分发 + 目标判定
 ├── NightTint (CanvasModulate)          夜晚压暗画面（HUD 在 CanvasLayer 上，不受影响）
 ├── DayCycle (Node)                     script = DayCycle.gd ← 昼夜循环
@@ -180,15 +182,50 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 
 种类 id **就是图集行号**。
 
-| id | 名称 | 图集行 | 种子价 | 收购价 | 每级秒数 | 满级总时长 | 单株利润 | 利润/秒 |
-|---|---|---|---|---|---|---|---|---|
-| 0 | 胡萝卜 | 0 | 3 | 6 | 2.0 | 8.0s | 3 | 0.38 |
-| 1 | 紫甘蓝 | 1 | 5 | 11 | 2.8 | 11.2s | 6 | 0.54 |
-| 2 | 玉米 | 2 | 8 | 19 | 3.6 | 14.4s | 11 | 0.76 |
-| 3 | 番茄 | 3 | 12 | 30 | 4.6 | 18.4s | 18 | 0.98 |
-| 4 | 卷心菜 | 4 | 18 | 48 | 5.6 | 22.4s | 30 | 1.34 |
+| id | 名称 | 图集行 | 种子价 | 收购价 | 每级秒数 | 满级总时长 | 单株利润 | 利润/秒 | **解锁** |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 | 胡萝卜 | 0 | 3 | 6 | 2.0 | 8.0s | 3 | 0.38 | 第 1 天 |
+| 1 | 紫甘蓝 | 1 | 5 | 11 | 2.8 | 11.2s | 6 | 0.54 | 第 2 天 |
+| 2 | 玉米 | 2 | 8 | 19 | 3.6 | 14.4s | 11 | 0.76 | 第 3 天 |
+| 3 | 番茄 | 3 | 12 | 30 | 4.6 | 18.4s | 18 | 0.98 | 第 5 天 |
+| 4 | 卷心菜 | 4 | 18 | 48 | 5.6 | 22.4s | 30 | 1.34 | 第 7 天 |
 
 越贵的作物**单位时间收益越高**，但前期投入大、占田时间长（夜里更容易被野猪啃）。这就是种植选择的意义。
+
+**作物按天数解锁**（`min_day`）：开局只有胡萝卜，之后每天天亮多一种。
+每次解锁都是一次小奖励，也把复杂度摊开 —— 而不是一上来就丢给玩家 5 个选择。
+- 商店只卖已解锁的（`Market.buy_seed` 会挡）
+- 按 `1-5` 选未解锁的会被拒绝并提示"要第 N 天才开放"
+- 天亮时自动打一行 `[解锁] 新作物：...`
+- 相关函数：`CropData.is_unlocked(id, day)` / `unlocked_kinds(day)` / `next_locked(day)`
+
+### 成长与专精（`Progression` 自动加载单例）
+
+三个系各自攒经验、升级，升级时**二选一**拿专精，**不可更改**。
+
+| 系 | 经验来源 |
+|---|---|
+| 农耕 | 每收获 1 个作物 +1 |
+| 战斗 | 每赶跑 1 只害兽 +1 |
+| 经营 | 每卖出一次 +1，之后每 10 金再 +1 |
+
+升级阈值 `LEVEL_STEPS = [3, 8]`（两级，每级对应一层专精）。
+
+| 系 | 第一次选择 | 第二次选择 |
+|---|---|---|
+| 农耕 | **农夫** 售价 +20% / **园丁** 浇水覆盖周围 3x3 | **育种家** 生长时间 -25% / **囤积者** 25% 概率多收一株 |
+| 战斗 | **剑客** 攻击范围 +40% / **铁壁** 最大生命 +3 | **处决者** 对满血敌人伤害翻倍 / **猎手** 赏金翻倍 |
+| 经营 | **商人** 种子便宜 30% / **储户** 每天天亮 +5 金 | **批发** 卖光额外 +15% / **保险** 晕倒不掉钱 |
+
+设计要点：
+- **每个选项改变的是"你每天怎么玩"，不是"数字 +5%"**。园丁（范围浇水）和农夫（卖价高）是两套节奏。
+- **不可逆**才有取舍，才有"下一局走另一条路"的重玩价值。
+- 专精效果**不写成一堆散落的 `if has_perk`**，而是集中成一组查询函数
+  （`sell_multiplier()` / `water_radius()` / `grow_time_multiplier()` / `max_hp_bonus()` …），
+  各系统问一句就行。**加新专精 = PERKS 加一条 + 查询函数加一行。**
+- 升级时 HUD 中央弹出二选一面板，**这时 1/2 是"选专精"而不是"选作物"**，
+  路由在 `FarmController._unhandled_input` 最前面。
+- `Progression.force_perk(id)` 可以绕过等级直接给专精（测试/调试用）；`enabled = false` 可以静音弹窗。
 
 ### 经济与目标
 
@@ -429,6 +466,26 @@ HUD 底部弹一条 2.5 秒的提示条。解锁记录进存档。
   在 `base_level` 实例化之前就跑完了，拿不到导航区域；不补的话动物切到 Move 状态会报
   `Invalid access to property 'navigation_polygon' on null instance`。
 
+### ⚠️ 偶发失败的两次教训（都发生在测试里，不是游戏代码里）
+
+**这两个 bug 单跑一遍都是绿的，只有连跑才暴露。所以现在固定连跑三遍。**
+
+1. **竞态：等冷却时敌人跑掉了。**
+   `test_combat` 里原本是「把玩家瞬移到蝙蝠身上 → 等 0.5 秒冷却 → 砍」。
+   蝙蝠速度 66，0.5 秒已经跑出 26 的攻击范围 → 这一刀砍空 → 连带三条断言失败，
+   残留的蝙蝠又让后面蜘蛛那段的场上计数从 1 变成 2。
+   **正确写法：先等冷却，再瞬移，立刻砍。**
+
+2. **系统间的隐性耦合：下雨会压暗画面。**
+   `test_daynight` 断言「白天画面重新变亮」（`tint.r > 0.99`）。
+   但加了天气之后，**雨天色调是叠在昼夜之上的**，天亮时正好赶上雨天就会失败。
+   修法：那个测试只管昼夜，所以开局先 `Weather.rain_chance = 0.0` 把天气关掉。
+   **教训：新系统改动了某个全局量时，要去搜一遍还有谁在断言那个量。**
+
+3. **另一类反复踩的坑：`Area2D` 的范围更新滞后一帧。**
+   测试里把玩家瞬移出商店范围后**立刻**按 F，`Market.is_player_inside()` 还是 true，
+   于是播种被商店分支抢走。**瞬移之后必须 `await` 若干 `physics_frame` 再操作。**
+
 ---
 
 ## 8. 当前进度
@@ -444,7 +501,8 @@ HUD 底部弹一条 2.5 秒的提示条。解锁记录进存档。
 - **昼夜循环**：45 秒一天，夜晚画面变暗，难度随天数爬坡
 - **目标**：攒够 300 金建成谷仓
 - **存档**：天亮自动存、启动自动读，F5/F9/F10 手动控制
-- **多种作物**：5 种，按 1-5 切换；越贵单位时间收益越高
+- **多种作物**：5 种，按 1-5 切换；越贵单位时间收益越高；**按天数解锁**（开局只有胡萝卜）
+- **成长与专精**：农耕 / 战斗 / 经营三系攒经验，升级时二选一拿不可逆专精
 - **音效**：10 个由代码合成的提示音，覆盖种植 / 浇水 / 收获 / 买卖 / 战斗 / 昼夜 / 目标
 - **打击感**：砍中野猪有刀光 + 受击闪红 + 硬直 + 击退
 - **胜利反馈**：攒够 300 金亮出「目标达成！谷仓建成了！」横幅
@@ -507,11 +565,17 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 8) 成就（26 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_achievements.tscn --quit-after 4000 2>&1 | Out-String
 
-# 9) 跑主场景 150 秒（约 3.3 个昼夜），抓运行时错误
+# 9) 成长与专精（51 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_progression.tscn --quit-after 6000 2>&1 | Out-String
+
+# 10) 跑主场景 150 秒（约 3.3 个昼夜），抓运行时错误
 & $godot --headless --path . --fixed-fps 60 --quit-after 9000 2>&1 | Out-String
 ```
 
-合计 277 项断言。
+合计 336 项断言。
+
+> ⚠️ **这些测试必须连跑三遍再下结论。** 已经踩过两次"单跑绿、连跑红"的偶发失败
+> （见第 7 节）。跑一遍不算验证过。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -545,4 +609,5 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 10 | 打磨：击退、胜利横幅、隐藏调试标签 | ✅ |
 | 11 | 害兽种类 + 难度爬坡（野猪/蝙蝠/蜘蛛，随天数解锁，击杀有赏金） | ✅ |
 | 12 | 攻击动画 + 天气（雨天自动浇灌）+ 成就系统 | ✅ |
-| 13 | 还没做：多地图（矿洞）、季节、NPC、动物产出 | ⬜ |
+| 13 | 开局简化（作物按天解锁）+ 三系成长与二选一专精 | ✅ |
+| 14 | 还没做：**导出独立 exe**（要先把项目升到 4.7.2 以匹配已有的导出模板）、多地图（矿洞）、季节、NPC、动物产出 | ⬜ |

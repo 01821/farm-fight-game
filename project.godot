@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 Level="*uid://cp5eslpyr05f4"
 Sfx="*res://Scenes/global/sfx.tscn"
+Progression="*res://Scripts/Global/Progression.gd"
 
 [display]
 

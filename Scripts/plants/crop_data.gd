@@ -17,13 +17,37 @@ const STAGE_COLUMNS: Array[int] = [4, 5, 6, 7, 8]
 const MAX_STAGE: int = 4
 
 ## id 就是图集行号；grow_time 是「每升一级」所需秒数
+## min_day = 第几天开始能种/能买 —— 开局只给胡萝卜，复杂度随天数摊开，
+## 每次解锁都是一次小奖励，而不是一上来就丢给玩家 5 个选择。
 const CROPS: Array[Dictionary] = [
-	{"id": 0, "name": "胡萝卜", "seed_price": 3, "sell_price": 6, "grow_time": 2.0},
-	{"id": 1, "name": "紫甘蓝", "seed_price": 5, "sell_price": 11, "grow_time": 2.8},
-	{"id": 2, "name": "玉米", "seed_price": 8, "sell_price": 19, "grow_time": 3.6},
-	{"id": 3, "name": "番茄", "seed_price": 12, "sell_price": 30, "grow_time": 4.6},
-	{"id": 4, "name": "卷心菜", "seed_price": 18, "sell_price": 48, "grow_time": 5.6},
+	{"id": 0, "name": "胡萝卜", "seed_price": 3, "sell_price": 6, "grow_time": 2.0, "min_day": 1},
+	{"id": 1, "name": "紫甘蓝", "seed_price": 5, "sell_price": 11, "grow_time": 2.8, "min_day": 2},
+	{"id": 2, "name": "玉米", "seed_price": 8, "sell_price": 19, "grow_time": 3.6, "min_day": 3},
+	{"id": 3, "name": "番茄", "seed_price": 12, "sell_price": 30, "grow_time": 4.6, "min_day": 5},
+	{"id": 4, "name": "卷心菜", "seed_price": 18, "sell_price": 48, "grow_time": 5.6, "min_day": 7},
 ]
+
+static func min_day_of(type_id: int) -> int:
+	return int(get_crop(type_id).get("min_day", 1))
+
+static func is_unlocked(type_id: int, day: int) -> bool:
+	return is_valid(type_id) and day >= min_day_of(type_id)
+
+## 第 day 天已经解锁的种类
+static func unlocked_kinds(day: int) -> Array[int]:
+	var out: Array[int] = []
+	for c in CROPS:
+		var id: int = int(c.get("id", 0))
+		if day >= int(c.get("min_day", 1)):
+			out.append(id)
+	return out
+
+## 下一个待解锁的种类（没有就返回 -1），用来给玩家提示「再撑几天有新作物」
+static func next_locked(day: int) -> int:
+	for c in CROPS:
+		if day < int(c.get("min_day", 1)):
+			return int(c.get("id", 0))
+	return -1
 
 static func count() -> int:
 	return CROPS.size()

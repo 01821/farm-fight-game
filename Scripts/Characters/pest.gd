@@ -35,6 +35,7 @@ var speed: float = 38.0
 var _reward: int = 0
 var _max_eats: int = 1
 var _eaten: int = 0
+var _max_hp: int = 1
 var _land: FarmLand
 var _player: Player
 var _contact_cd: float = 0.0
@@ -48,6 +49,7 @@ var _last_pos: Vector2 = Vector2.ZERO
 func _ready() -> void:
 	add_to_group("pest")
 	hp = PestData.hp_of(kind)
+	_max_hp = hp
 	speed = PestData.speed_of(kind)
 	_reward = PestData.reward_of(kind)
 	_max_eats = maxi(1, PestData.max_eats_of(kind))
@@ -63,8 +65,12 @@ func display_name() -> String:
 func take_damage(amount: int, from: Vector2 = Vector2.INF) -> void:
 	if hp <= 0:
 		return
-	hp -= amount
-	print("[战斗] ", display_name(), " 挨了一下，剩 ", hp, " 点血")
+	var dmg: int = amount
+	# 处决者：打满血的敌人伤害翻倍
+	if Progression.executes_full_hp() and hp >= _max_hp:
+		dmg *= 2
+	hp -= dmg
+	print("[战斗] ", display_name(), " 挨了一下（", dmg, "），剩 ", hp, " 点血")
 	if hp <= 0:
 		_die()
 		return
@@ -79,10 +85,13 @@ func _die() -> void:
 	print("[战斗] ", display_name(), " 被赶跑了")
 	if _player != null and is_instance_valid(_player):
 		_player.register_kill()
-		if _reward > 0:
-			_player.earn(_reward)
+		Progression.add_xp(Progression.Skill.COMBAT, 1)
+		# 猎手：赏金翻倍
+		var bounty: int = int(round(float(_reward) * Progression.bounty_multiplier()))
+		if bounty > 0:
+			_player.earn(bounty)
 			Sfx.play("coin")
-			print("[战斗] 赏金 +", _reward, " 金")
+			print("[战斗] 赏金 +", bounty, " 金")
 	queue_free()
 
 func _physics_process(delta: float) -> void:

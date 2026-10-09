@@ -12,8 +12,12 @@ const GOLD_GOAL: int = 300
 @onready var player: Player = $"../level/Player"
 @onready var land: FarmLand = $"../Land"
 @onready var market: Market = $"../level/Static/Market"
+@onready var cycle: DayCycle = $"../DayCycle"
 
 var goal_reached: bool = false
+
+func current_day() -> int:
+	return cycle.day if cycle != null else 1
 
 func _process(_delta: float) -> void:
 	if goal_reached:
@@ -24,6 +28,14 @@ func _process(_delta: float) -> void:
 		print("[目标] 攒够 ", GOLD_GOAL, " 金，谷仓建成了！")
 
 func _unhandled_input(event: InputEvent) -> void:
+	# 升级选择优先：这时候 1 / 2 是「选专精」，不是「选作物种类」
+	if Progression.pending_choice >= 0:
+		if event.is_action_pressed("seed_1"):
+			Progression.choose(0)
+			return
+		if event.is_action_pressed("seed_2"):
+			Progression.choose(1)
+			return
 	if event.is_action_pressed("cycle_item"):
 		player.cycle_item()
 		print("[手上] 换成 ", player.item_name())
@@ -34,12 +46,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	# 1-5 选择作物种类（播种和买种子都用它）
 	for i in range(CropData.count()):
 		if event.is_action_pressed("seed_%d" % (i + 1)):
-			if player.select_seed_type(i):
-				print("[种子] 选中 ", player.crop_name(), "（有 ", player.seed_count(i), " 粒，种子价 ",
-					CropData.seed_price(i), "，收购价 ", CropData.sell_price(i), "）")
-			else:
-				print("[种子] 已经是 ", player.crop_name(), " 了")
+			select_seed(i)
 			return
+
+func select_seed(i: int) -> void:
+	if not CropData.is_unlocked(i, current_day()):
+		print("[种子] ", CropData.name_of(i), " 要第 ", CropData.min_day_of(i), " 天才开放")
+		return
+	if player.select_seed_type(i):
+		print("[种子] 选中 ", player.crop_name(), "（有 ", player.seed_count(i), " 粒，种子价 ",
+			market.seed_price_now(i), "，收购价 ", CropData.sell_price(i), "）")
+	else:
+		print("[种子] 已经是 ", player.crop_name(), " 了")
 
 func use_held_item() -> bool:
 	# 站在商店里，交易优先
@@ -73,11 +91,13 @@ func attack() -> bool:
 		return false
 	player.begin_attack_cooldown()
 	var hit: int = 0
+	# 剑客专精扩大攻击范围
+	var reach: float = ATTACK_RANGE * Progression.attack_range_multiplier()
 	for node in get_tree().get_nodes_in_group("pest"):
 		var pest := node as Pest
 		if pest == null or not is_instance_valid(pest):
 			continue
-		if player.global_position.distance_to(pest.global_position) <= ATTACK_RANGE:
+		if player.global_position.distance_to(pest.global_position) <= reach:
 			pest.take_damage(ATTACK_DAMAGE, player.global_position)
 			hit += 1
 	if hit == 0:

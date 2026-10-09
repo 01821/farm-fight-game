@@ -46,6 +46,10 @@ func _ready() -> void:
 	if Level.animalRegion == null:
 		Level.animalRegion = region
 
+	# 天气也会压暗画面（雨天色调叠在昼夜之上），这里只测昼夜，所以先把下雨关掉。
+	# 不关的话，天亮时正好赶上雨天就会让「白天画面重新变亮」偶发失败。
+	(_level.get_node("Weather") as Weather).rain_chance = 0.0
+
 	print("--- 开局（白天） ---")
 	_cycle.running = false
 	_check("第 1 天", _cycle.day == 1)

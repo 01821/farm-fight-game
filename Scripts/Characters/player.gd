@@ -31,6 +31,8 @@ var harvested: Array[int] = [0, 0, 0, 0, 0]
 var seed_type: int = 0
 var water_left: int = 0
 var hp: int = MAX_HP
+## 实际上限 = MAX_HP + 铁壁专精加成，_process 里同步
+var max_hp: int = MAX_HP
 var active_item: int = Item.SEED
 
 ## 生涯累计（成就用，不随卖作物清零）
@@ -42,18 +44,57 @@ var _water_source_count: int = 0
 var _attack_cd: float = 0.0
 var _slash_time: float = 0.0
 var _spawn_position: Vector2 = Vector2.ZERO
+var _cycle_hooked: bool = false
 
 @onready var slash: Polygon2D = $Slash
 
 func _ready() -> void:
 	add_to_group("player")
 	_spawn_position = global_position
+	_hook_day_cycle()
+
+## DayCycle 可能排在后面，_ready 时分组还没注册，所以允许之后再补连
+func _hook_day_cycle() -> void:
+	if _cycle_hooked:
+		return
+	var cycle := get_tree().get_first_node_in_group("day_cycle") as DayCycle
+	if cycle == null:
+		return
+	cycle.day_started.connect(_on_day_started)
+	_cycle_hooked = true
+
+func _on_day_started(day: int) -> void:
+	# 储户专精：每天利息
+	var interest: int = Progression.daily_interest()
+	if interest > 0:
+		earn(interest)
+		Sfx.play("coin")
+		print("[成长] 储户利息 +", interest, " 金（第 ", day, " 天）")
+	# 新作物解锁提示
+	for id in CropData.unlocked_kinds(day):
+		if not CropData.is_unlocked(id, day - 1):
+			print("[解锁] 新作物：", CropData.name_of(id), "（种子 ", CropData.seed_price(id),
+				" 金，收购 ", CropData.sell_price(id), " 金）")
+
+## 铁壁专精会加最大生命。加上限时顺手把血补上，免得永远顶着残血。
+func _sync_max_hp() -> void:
+	var m: int = MAX_HP + Progression.max_hp_bonus()
+	if m == max_hp:
+		return
+	var gained: int = m - max_hp
+	max_hp = m
+	if gained > 0:
+		hp += gained
+	hp = mini(hp, max_hp)
 
 func _unhandled_input(event: InputEvent) -> void:
 	InputDirection = Input.get_vector("left", "right", "up", "down")
 	UpdateFaceDirection()
 
 func _process(delta: float) -> void:
+	if not _cycle_hooked:
+		_hook_day_cycle()
+	_sync_max_hp()
 	if _water_source_count > 0 and water_left < WATER_CAPACITY:
 		water_left = WATER_CAPACITY
 	_attack_cd = maxf(0.0, _attack_cd - delta)
@@ -178,15 +219,17 @@ func take_damage(amount: int) -> void:
 		return
 	hp = maxi(0, hp - amount)
 	Sfx.play("hurt")
-	print("[玩家] 掉血 ", amount, "，剩 ", hp, "/", MAX_HP)
+	print("[玩家] 掉血 ", amount, "，剩 ", hp, "/", max_hp)
 	if hp <= 0:
 		_die()
 
-## 晕倒：损失一半金币，被抬回出生点，补满血
+## 晕倒：损失一半金币（保险专精可免），被抬回出生点，补满血
 func _die() -> void:
-	var lost: int = money / 2
+	var lost: int = 0
+	if Progression.death_penalty_enabled():
+		lost = money / 2
 	money -= lost
-	hp = MAX_HP
+	hp = max_hp
 	water_left = 0
 	global_position = _spawn_position
 	velocity = Vector2.ZERO
@@ -206,7 +249,7 @@ func to_save_data() -> Dictionary:
 
 func apply_save_data(d: Dictionary) -> void:
 	money = maxi(0, int(d.get("money", 20)))
-	hp = clampi(int(d.get("hp", MAX_HP)), 0, MAX_HP)
+	hp = clampi(int(d.get("hp", MAX_HP)), 0, maxi(MAX_HP, max_hp))
 	water_left = clampi(int(d.get("water_left", 0)), 0, WATER_CAPACITY)
 	seed_type = clampi(int(d.get("seed_type", 0)), 0, CropData.count() - 1)
 	active_item = clampi(int(d.get("active_item", Item.SEED)), 0, ITEM_NAMES.size() - 1)
