@@ -70,6 +70,15 @@ func _ready() -> void:
 	_player = _level.get_node("MinePlayer")
 	_terrain = _level.get_node("Terrain")
 
+	# ⚠️ 这个测试只管**移动手感**，先把关卡里的怪清掉。
+	#    踩过的坑：往 mine_level.tscn 加了怪之后，这里用的是自定义小地图，
+	#    怪在自定义地图上脚下没地面会到处漂，最后蝙蝠飞过来把玩家撞飞，
+	#    "落在平台上"这条断言就莫名其妙地红了 —— 而且看起来像是跳跃代码坏了。
+	for n in get_tree().get_nodes_in_group("mine_enemy"):
+		n.queue_free()
+	await _step(2)
+	_check("已清场，没有怪干扰", get_tree().get_nodes_in_group("mine_enemy").is_empty())
+
 	print("--- 地形 ---")
 	var used := _terrain.get_used_cells()
 	print("  INFO 铺了 ", used.size(), " 格")

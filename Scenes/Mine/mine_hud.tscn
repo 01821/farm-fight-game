@@ -1,0 +1,58 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Mine/mine_hud.gd" id="1_hud"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap_packed.png" id="2_tiles"]
+
+; 心形是**预建的 Sprite2D 子节点**，脚本只改 region_rect，不在运行时创建节点。
+; 预建 6 颗（够 12 点血），用不到的自己 visible = false。
+[node name="MineHud" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Hearts" type="Node2D" parent="."]
+
+[node name="Heart1" type="Sprite2D" parent="Hearts"]
+position = Vector2(10, 12)
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(72, 36, 18, 18)
+
+[node name="Heart2" type="Sprite2D" parent="Hearts"]
+position = Vector2(27, 12)
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(72, 36, 18, 18)
+
+[node name="Heart3" type="Sprite2D" parent="Hearts"]
+position = Vector2(44, 12)
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(72, 36, 18, 18)
+
+[node name="Heart4" type="Sprite2D" parent="Hearts"]
+position = Vector2(61, 12)
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(72, 36, 18, 18)
+
+[node name="Heart5" type="Sprite2D" parent="Hearts"]
+position = Vector2(78, 12)
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(72, 36, 18, 18)
+
+[node name="Heart6" type="Sprite2D" parent="Hearts"]
+position = Vector2(95, 12)
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(72, 36, 18, 18)
+
+[node name="HintLabel" type="Label" parent="."]
+offset_left = 8.0
+offset_top = 26.0
+offset_right = 392.0
+offset_bottom = 44.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.85)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "[A/D]走 [空格]跳 [F]砍"

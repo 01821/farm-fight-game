@@ -16,6 +16,15 @@ class_name MinePlayer extends CharacterBody2D
 ## "进了矿洞 WASD 不动"这类经典 bug。
 
 signal attacked(hit_count: int)
+signal damaged(amount: int)
+signal died
+
+const MAX_HP: int = 6
+## 受伤后的无敌时间。没有它的话贴着怪会一秒掉光血，手感极差。
+const INVULN_TIME: float = 0.8
+## 被撞飞时的初速度
+const HURT_KNOCKBACK_X: float = 120.0
+const HURT_KNOCKBACK_Y: float = -150.0
 
 const SPEED: float = 112.0
 const ACCEL: float = 900.0
@@ -40,10 +49,13 @@ const ATTACK_OFFSET: float = 13.0
 ## 1 = 朝右，-1 = 朝左
 var facing: int = 1
 
+var hp: int = MAX_HP
+
 var _coyote: float = 0.0
 var _jump_buffer: float = 0.0
 var _attack_cd: float = 0.0
 var _slash_time: float = 0.0
+var _invuln: float = 0.0
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var slash: Polygon2D = $Slash
@@ -52,8 +64,12 @@ var _slash_time: float = 0.0
 ## 不用等一帧、也不用在运行时创建任何节点。
 @onready var attack_box: Area2D = $AttackBox
 
+func _ready() -> void:
+	add_to_group("mine_player")
+
 func _physics_process(delta: float) -> void:
 	_attack_cd = maxf(0.0, _attack_cd - delta)
+	_update_invuln(delta)
 	_update_slash(delta)
 
 	var dir: float = Input.get_axis("left", "right")
@@ -144,6 +160,42 @@ func spawn_damage_number(amount: int, at: Vector2) -> void:
 
 func can_attack() -> bool:
 	return _attack_cd <= 0.0
+
+# --- 受伤 ---
+
+## 返回这次有没有真的吃到伤害（无敌帧内会返回 false）
+func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
+	if _invuln > 0.0 or hp <= 0 or amount <= 0:
+		return false
+	hp = maxi(0, hp - amount)
+	_invuln = INVULN_TIME
+	Sfx.play("hurt")
+	# 被撞飞一下，给玩家一个"被打到了"的即时反馈，也顺便拉开距离
+	if from.is_finite():
+		var dx: float = signf(global_position.x - from.x)
+		if absf(dx) < 0.01:
+			dx = -float(facing)
+		velocity = Vector2(dx * HURT_KNOCKBACK_X, HURT_KNOCKBACK_Y)
+	print("[矿洞] 玩家掉血 ", amount, "，剩 ", hp, "/", MAX_HP)
+	damaged.emit(amount)
+	if hp <= 0:
+		print("[矿洞] 玩家倒下了")
+		died.emit()
+	return true
+
+func is_invulnerable() -> bool:
+	return _invuln > 0.0
+
+## 无敌期间让角色一闪一闪，玩家一眼就知道"现在是安全的"
+func _update_invuln(delta: float) -> void:
+	if _invuln <= 0.0:
+		return
+	_invuln = maxf(0.0, _invuln - delta)
+	if _invuln <= 0.0:
+		sprite.modulate = Color.WHITE
+	else:
+		var blink: bool = fmod(_invuln, 0.16) < 0.08
+		sprite.modulate = Color(1, 1, 1, 0.35) if blink else Color.WHITE
 
 func _update_slash(delta: float) -> void:
 	if _slash_time <= 0.0:
