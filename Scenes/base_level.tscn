@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://cwr6itq5omtrl" path="res://Scenes/animals/base_animal.tscn" id="8_0k83q"]
 [ext_resource type="PackedScene" uid="uid://bei660qp5smq6" path="res://Scenes/buildings/water_bucket.tscn" id="8_ta4i7"]
 [ext_resource type="PackedScene" uid="uid://byymy2kf1g38r" path="res://Scenes/buildings/water_container.tscn" id="9_rqtgi"]
+[ext_resource type="Script" path="res://Scripts/UI/hud.gd" id="10_hud"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -936,3 +937,27 @@ position = Vector2(240, 192)
 
 [node name="animalRegion2D" type="NavigationRegion2D" parent="level" unique_id=1594537583 groups=["animalRegion"]]
 navigation_polygon = SubResource("NavigationPolygon_wvhbo")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("10_hud")
+
+[node name="Backdrop" type="ColorRect" parent="HUD"]
+offset_right = 230.0
+offset_bottom = 34.0
+color = Color(0, 0, 0, 0.45)
+
+[node name="InfoLabel" type="Label" parent="HUD"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 228.0
+offset_bottom = 19.0
+theme_override_font_sizes/font_size = 10
+
+[node name="HintLabel" type="Label" parent="HUD"]
+offset_left = 5.0
+offset_top = 19.0
+offset_right = 228.0
+offset_bottom = 33.0
+theme_override_font_sizes/font_size = 10
+text = "P plant    F water    E harvest"
+

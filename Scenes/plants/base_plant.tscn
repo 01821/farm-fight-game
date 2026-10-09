@@ -6,6 +6,12 @@
 [node name="BasePlant" type="Node2D" unique_id=1632929632]
 script = ExtResource("1_ex8w2")
 
+[node name="WetMark" type="Polygon2D" parent="."]
+z_index = -1
+visible = false
+color = Color(0.35, 0.55, 1, 0.3)
+polygon = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=298857532]
 position = Vector2(0, -3)
 texture = ExtResource("1_r0s23")
@@ -13,5 +19,6 @@ region_enabled = true
 region_rect = Rect2(64, 0, 16, 16)
 
 [node name="Timer" type="Timer" parent="." unique_id=281567862]
+one_shot = true
 
 [connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

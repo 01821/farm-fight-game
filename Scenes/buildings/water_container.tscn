@@ -1,13 +1,26 @@
 [gd_scene format=3 uid="uid://byymy2kf1g38r"]
 
 [ext_resource type="Texture2D" uid="uid://c2g48qq2w1748" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="1_vnlld"]
+[ext_resource type="Script" path="res://Scripts/buildings/water_source.gd" id="2_wsrc"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wsrc"]
+radius = 28.0
 
 [node name="WaterContainer" type="Sprite2D" unique_id=92657982]
 texture = ExtResource("1_vnlld")
 region_enabled = true
 region_rect = Rect2(32, 128, 32, 16)
+script = ExtResource("2_wsrc")
 
 [node name="ActiveSprite" type="Sprite2D" parent="." unique_id=2107073325]
+visible = false
 texture = ExtResource("1_vnlld")
 region_enabled = true
 region_rect = Rect2(32, 144, 32, 16)
+
+[node name="InteractionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Shape" type="CollisionShape2D" parent="InteractionArea"]
+shape = SubResource("CircleShape2D_wsrc")
