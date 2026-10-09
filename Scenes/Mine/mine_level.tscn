@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Mine/mine_level.gd" id="1_lvl"]
+[ext_resource type="PackedScene" path="res://Scenes/Mine/mine_player.tscn" id="2_player"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap_packed.png" id="3_tiles"]
+
+; ⚠️ 两个必须对齐的东西，错一个都不会报错、只会手感不对：
+;    1) TileSet.tile_size **必须**和 texture_region_size 一样是 18×18。
+;       只设 texture_region_size 的话，显示是对的，但格子在世界里按 16×16 摆，位置全歪。
+;    2) 瓦片的物理多边形是**相对格子中心**的，不是左上角！
+;       整格 = (-9,-9) 到 (9,9)；单向平台的薄片 = 顶部 6px。
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mine"]
+texture = ExtResource("3_tiles")
+texture_region_size = Vector2i(18, 18)
+0:0/0 = 0
+0:2/0 = 0
+4:0/0 = 0
+12:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, 9, -9, 9)
+0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, 9, -9, 9)
+4:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, 9, -9, 9)
+12:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, -3, -9, -3)
+12:0/0/physics_layer_0/polygon_0/one_way = true
+
+[sub_resource type="TileSet" id="TileSet_mine"]
+tile_size = Vector2i(18, 18)
+physics_layer_0/collision_layer = 1
+sources/0 = SubResource("TileSetAtlasSource_mine")
+
+[node name="MineLevel" type="Node2D"]
+script = ExtResource("1_lvl")
+
+[node name="Terrain" type="TileMapLayer" parent="."]
+tile_set = SubResource("TileSet_mine")
+
+[node name="MinePlayer" parent="." instance=ExtResource("2_player")]
+position = Vector2(40, 40)
