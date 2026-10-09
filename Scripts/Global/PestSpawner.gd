@@ -61,6 +61,9 @@ func _process(delta: float) -> void:
 		_try_resolve()
 		if _cycle == null:
 			_active = always_active
+	else:
+		# 每帧与昼夜状态对齐：读档会直接改 DayCycle 状态，只靠信号同步会漏掉
+		_active = _cycle.is_night
 	if not _active:
 		return
 	_wave_timer += delta

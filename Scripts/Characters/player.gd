@@ -100,3 +100,23 @@ func add_water_source() -> void:
 
 func remove_water_source() -> void:
 	_water_source_count = maxi(0, _water_source_count - 1)
+
+func to_save_data() -> Dictionary:
+	return {
+		"money": money, "hp": hp, "water_left": water_left,
+		"seeds": seeds, "harvested": harvested, "active_item": active_item,
+		"pos_x": global_position.x, "pos_y": global_position.y,
+	}
+
+func apply_save_data(d: Dictionary) -> void:
+	money = maxi(0, int(d.get("money", 20)))
+	hp = clampi(int(d.get("hp", MAX_HP)), 0, MAX_HP)
+	water_left = clampi(int(d.get("water_left", 0)), 0, WATER_CAPACITY)
+	seeds = maxi(0, int(d.get("seeds", 8)))
+	harvested = maxi(0, int(d.get("harvested", 0)))
+	active_item = clampi(int(d.get("active_item", Item.SEED)), 0, ITEM_NAMES.size() - 1)
+	global_position = Vector2(
+		float(d.get("pos_x", global_position.x)),
+		float(d.get("pos_y", global_position.y))
+	)
+	velocity = Vector2.ZERO

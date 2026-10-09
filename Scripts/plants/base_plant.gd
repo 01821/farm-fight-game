@@ -56,3 +56,16 @@ func updateSprite() -> void:
 
 func _updateWetMark() -> void:
 	wet_mark.visible = is_watered
+
+func to_save_data() -> Dictionary:
+	return {"type": plantType, "stage": growStage, "watered": is_watered}
+
+## 读档用。必须在 add_child 之后调用（此时 _ready 已经跑过，wet_mark 等已就绪）。
+func apply_save_data(d: Dictionary) -> void:
+	plantType = int(d.get("type", 0))
+	growStage = clampi(int(d.get("stage", 0)), 0, endStage)
+	is_watered = bool(d.get("watered", false)) and not is_mature()
+	updateSprite()
+	_updateWetMark()
+	if is_watered:
+		timer.start()

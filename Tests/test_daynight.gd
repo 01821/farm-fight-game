@@ -29,6 +29,10 @@ func _ready() -> void:
 	var ps := load("res://Scenes/base_level.tscn") as PackedScene
 	_level = ps.instantiate()
 	add_child(_level)
+	# 本测试会触发「天亮自动存档」，必须掐掉，否则会覆盖玩家真正的存档
+	var save_sys := _level.get_node("SaveSystem") as SaveSystem
+	save_sys.auto_load = false
+	save_sys.auto_save_on_dawn = false
 	await get_tree().process_frame
 	await get_tree().process_frame
 
@@ -112,7 +116,7 @@ func _ready() -> void:
 	print("  INFO ", held.text)
 	_check("HUD 显示天数", "天" in info.text)
 	_check("HUD 显示时段", "白天" in info.text or "夜晚" in info.text)
-	_check("HUD 显示目标已达成", "已达成" in farm.text)
+	_check("HUD 显示目标已达成", "已达成" in info.text)
 
 	_finish()
 

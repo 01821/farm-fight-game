@@ -16,17 +16,16 @@ extends CanvasLayer
 @onready var controller: FarmController = $"../FarmController"
 
 func _process(_delta: float) -> void:
-	info_label.text = "第 %d 天   %s %d 秒   金币 %d   血量 %d/%d" % [
-		cycle.day, cycle.phase_name(), ceili(cycle.phase_time_left()),
-		player.money, player.hp, Player.MAX_HP
-	]
+	var phase := "%s %d 秒" % [cycle.phase_name(), ceili(cycle.phase_time_left())]
 	if controller.goal_reached:
-		farm_label.text = "种子 %d   作物 %d   水量 %d/%d   目标已达成！" % [
-			player.seeds, player.harvested, player.water_left, Player.WATER_CAPACITY
-		]
+		info_label.text = "第 %d 天   %s   目标已达成！" % [cycle.day, phase]
 	else:
-		farm_label.text = "种子 %d   作物 %d   水量 %d/%d   目标 %d/%d" % [
-			player.seeds, player.harvested, player.water_left, Player.WATER_CAPACITY,
+		info_label.text = "第 %d 天   %s   目标 %d/%d" % [
+			cycle.day, phase,
 			mini(player.money, FarmController.GOLD_GOAL), FarmController.GOLD_GOAL
 		]
-	held_label.text = "[Q] 切换   [F] 使用   手持: %s" % player.item_name()
+	farm_label.text = "金币 %d   血量 %d/%d   种子 %d   作物 %d   水量 %d/%d" % [
+		player.money, player.hp, Player.MAX_HP,
+		player.seeds, player.harvested, player.water_left, Player.WATER_CAPACITY
+	]
+	held_label.text = "手持: %s   [Q]切换 [F]使用 [F5]存 [F9]读" % player.item_name()

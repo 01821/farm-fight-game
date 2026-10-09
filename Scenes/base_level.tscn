@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://Scripts/Global/PestSpawner.gd" id="12_pest"]
 [ext_resource type="PackedScene" path="res://Scenes/animals/boar.tscn" id="13_boar"]
 [ext_resource type="Script" path="res://Scripts/Global/DayCycle.gd" id="14_day"]
+[ext_resource type="Script" path="res://Scripts/Global/SaveSystem.gd" id="15_save"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -978,6 +979,9 @@ script = ExtResource("11_fctl")
 
 [node name="DayCycle" type="Node" parent="."]
 script = ExtResource("14_day")
+
+[node name="SaveSystem" type="Node" parent="."]
+script = ExtResource("15_save")
 
 [node name="PestSpawner" type="Node2D" parent="."]
 position = Vector2(240, 192)

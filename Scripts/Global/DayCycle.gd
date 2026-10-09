@@ -71,3 +71,14 @@ func _update_tint(delta: float) -> void:
 	var target: float = 1.0 if is_night else 0.0
 	_tint = move_toward(_tint, target, delta / FADE_TIME)
 	night_tint.color = DAY_COLOR.lerp(NIGHT_COLOR, _tint)
+
+func to_save_data() -> Dictionary:
+	return {"day": day, "elapsed": elapsed}
+
+func apply_save_data(d: Dictionary) -> void:
+	day = maxi(1, int(d.get("day", 1)))
+	elapsed = clampf(float(d.get("elapsed", 0.0)), 0.0, maxf(0.0, day_length - 0.001))
+	# 时段以 elapsed 为准重新推导，不存 is_night —— 免得存档里出现自相矛盾的组合
+	is_night = elapsed >= day_length * day_ratio
+	_tint = 1.0 if is_night else 0.0
+	night_tint.color = DAY_COLOR.lerp(NIGHT_COLOR, _tint)

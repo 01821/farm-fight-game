@@ -35,6 +35,7 @@ Scripts/
   Global/Level.gd                         自动加载单例
   Global/DayCycle.gd                      class_name DayCycle：昼夜循环
   Global/PestSpawner.gd                   class_name PestSpawner：夜晚放野猪
+  Global/SaveSystem.gd                    class_name SaveSystem：存档 / 读档
   Characters/{character,player,base_animal}.gd
   Characters/boar.gd                      class_name Boar：野猪
   State/{State,state_machine}.gd          状态机基础设施
@@ -62,6 +63,9 @@ Tests/                                    一次性自测场景（开发用，�
 | `up` / `down` / `left` / `right` | W / S / A / D | 移动 |
 | `cycle_item` | **Q** | 切换手持道具 |
 | `use_item` | **F** | 使用手持道具（唯一动作键） |
+| `quick_save` | **F5** | 手动存档 |
+| `quick_load` | **F9** | 读档 |
+| `delete_save` | **F10** | 删除存档（下次启动就是新游戏） |
 
 **2D 物理层命名**
 
@@ -91,6 +95,7 @@ baseLevel (Node2D)
 ├── FarmController (Node)               script = farm_controller.gd ← F 键分发 + 目标判定
 ├── NightTint (CanvasModulate)          夜晚压暗画面（HUD 在 CanvasLayer 上，不受影响）
 ├── DayCycle (Node)                     script = DayCycle.gd ← 昼夜循环
+├── SaveSystem (Node)                   script = SaveSystem.gd ← 存档 / 读档
 ├── PestSpawner (Node2D)                script = PestSpawner.gd，boar_scene 指向 boar.tscn
 └── level (Node2D, y_sort)
     ├── Static (Node2D, y_sort)
@@ -174,6 +179,27 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **HUD 不会被压暗**：HUD 挂在 `CanvasLayer` 上，属于另一块画布，`CanvasModulate` 管不到它。
 - `DayCycle.running = false` 可冻结时间（测试用）。
 - 场上没作物时野猪会自己离开（`GIVE_UP_TIME` 6 秒）——所以"不种地就没有夜间威胁"是设计使然，不是 bug。
+
+### 存档
+
+`SaveSystem`（挂在 `base_level` 上）把状态写成一个 JSON：`user://farm_save.json`
+（Windows 实机路径 `%APPDATA%\Godot\app_userdata\farmAndFightGame\farm_save.json`，约 300 字节）。
+
+| 键 | 作用 |
+|---|---|
+| **F5** | 手动存档 |
+| **F9** | 读档 |
+| **F10** | 删除存档（下次启动就是新游戏） |
+
+- **天亮自动存档**（接的是 `DayCycle.day_started` 信号）；**启动自动读档**。
+- 自动读档刻意**延后到第一帧的 `_process`**，而不是 `_ready`。这样测试可以在 `add_child`
+  之后、第一帧之前把 `save_path` 换成临时文件——既测到真实读档路径，又不会碰玩家存档。
+- 存的内容：天数与当天进度、玩家（金币/血量/水量/种子/篮子/手持物/坐标）、
+  地块上每一株作物（类型、生长阶段、是否浇过水）、目标进度。
+- **只存 `elapsed`，不存 `is_night`**：时段在读取时由 `elapsed` 重新推导，免得存档里出现
+  自相矛盾的组合。
+- 存档带 `version` 字段；**版本不符或 JSON 损坏时拒绝读取并给提示，不会崩**。
+- 各系统通过 `to_save_data()` / `apply_save_data()` 参与存档；以后新增系统照这个模式接一行即可。
 
 ### 战斗
 
@@ -261,6 +287,11 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
   A 查到的必然是 null（B 还没执行 `add_to_group`）。已踩过：`PestSpawner` 找 `DayCycle`。
   稳的做法是**两件都做**：场景里把 B 排在前面，**同时**让 A 支持之后补查一次，不依赖顺序。
 - `character.gd` 里的 `go()` / `dieOnCompany()` 和恒为 `false` 的 `workToAdd` 是**占位玩笑代码**。
+- ⚠️ **测试必须掐掉存档**：`base_level` 上挂着 `SaveSystem`（默认启动自动读档 + 天亮自动存档）。
+  其它测试实例化 `base_level` 时会读到玩家**真正的**存档，而 `test_daynight` 还会**覆盖**它。
+  所有不测存档的测试，都要在第一帧之前设 `auto_load = false` 和 `auto_save_on_dawn = false`。
+- ⚠️ 跑主场景冒烟测试前建议先删掉 `user://farm_save.json`，否则会从存档的天数继续，
+  冒烟测试就不确定了。
 - `game.tscn` 是空壳；`tree_2.tscn` / `tree_3.tscn` 没被任何场景引用。
 - 动物状态里 `speed` 在 `Update()` 每帧重新随机——速度一直在抖，疑似写错位置（野猪没这问题）。
 - ⚠️ **测试里必须手动补 `Level.animalRegion`**：测试场景不是主场景，自动加载 `Level` 的 `_ready`
@@ -280,6 +311,7 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **战斗循环**：**夜晚**野猪成群来袭啃作物，用剑砍跑它；被顶会掉血；晕倒损失一半金币；天亮野猪撤退
 - **昼夜循环**：45 秒一天，夜晚画面变暗，难度随天数爬坡
 - **目标**：攒够 300 金建成谷仓
+- **存档**：天亮自动存、启动自动读，F5/F9/F10 手动控制
 - 水壶容量与水源自动补水
 - HUD：**中文界面**，显示 金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
@@ -324,11 +356,14 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 4) 昼夜 + 夜晚来袭 + 目标（26 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_daynight.tscn --quit-after 4000 2>&1 | Out-String
 
-# 5) 跑主场景 100 秒（约 2.2 个昼夜），抓运行时错误
+# 5) 存档（34 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_save.tscn --quit-after 4000 2>&1 | Out-String
+
+# 6) 跑主场景 100 秒（约 2.2 个昼夜），抓运行时错误
 & $godot --headless --path . --fixed-fps 60 --quit-after 6000 2>&1 | Out-String
 ```
 
-合计 115 项断言。
+合计 149 项断言。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -355,5 +390,6 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 3 | 经济：卖作物、买种子、商店交互 | ✅ |
 | 4 | 战斗：野猪啃作物 + 剑 + 血量 + 刷新器 | ✅ |
 | 5 | 中文 UI（Fusion Pixel Font 12px，OFL） | ✅ |
-| 6 | **昼夜循环 + 夜晚成群来袭 + 目标** | ✅ |
-| 7 | 打磨：多种作物、音效、攻击动画、存档 | ⬜ |
+| 6 | 昼夜循环 + 夜晚成群来袭 + 目标 | ✅ |
+| 7 | **存档系统**（天亮自动存 / 启动自动读 / F5 F9 F10） | ✅ |
+| 8 | 打磨：多种作物、音效、攻击动画 | ⬜ 下一步 |

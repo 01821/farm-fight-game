@@ -73,3 +73,9 @@ func attack() -> bool:
 		return false
 	print("[战斗] 砍中 ", hit, " 只野猪")
 	return true
+
+func to_save_data() -> Dictionary:
+	return {"goal_reached": goal_reached}
+
+func apply_save_data(d: Dictionary) -> void:
+	goal_reached = bool(d.get("goal_reached", false))

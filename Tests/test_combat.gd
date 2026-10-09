@@ -27,6 +27,10 @@ func _ready() -> void:
 	var ps := load("res://Scenes/base_level.tscn") as PackedScene
 	_level = ps.instantiate()
 	add_child(_level)
+	# 测试绝不能碰玩家真正的存档
+	var save_sys := _level.get_node("SaveSystem") as SaveSystem
+	save_sys.auto_load = false
+	save_sys.auto_save_on_dawn = false
 	await get_tree().process_frame
 	await get_tree().process_frame
 
