@@ -130,7 +130,7 @@ autoplay = &"Idle"
 [node name="debugLabel" type="Label" parent="." unique_id=903617642]
 offset_right = 40.0
 offset_bottom = 23.0
-theme_override_font_sizes/font_size = 8
+theme_override_font_sizes/font_size = 12
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=502004525]
 position = Vector2(0, -6)

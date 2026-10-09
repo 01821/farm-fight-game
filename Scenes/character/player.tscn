@@ -132,16 +132,15 @@ autoplay = &"Idle"
 [node name="debugLabel" type="Label" parent="." unique_id=1351044096]
 offset_right = 40.0
 offset_bottom = 23.0
-theme_override_font_sizes/font_size = 8
+theme_override_font_sizes/font_size = 12
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=395679338]
 position = Vector2(0, -5)
 shape = SubResource("CircleShape2D_wvhbo")
 
-[node name="Slash" type="Polygon2D" parent="."]
-position = Vector2(0, -6)
-z_index = 1
+[node name="Slash" type="Polygon2D" parent="." unique_id=1028689774]
 visible = false
+z_index = 1
+position = Vector2(0, -6)
 color = Color(1, 1, 1, 0.75)
 polygon = PackedVector2Array(13, -22.5, 19.9, -16.7, 24.4, -8.9, 26, 0, 24.4, 8.9, 19.9, 16.7, 13, 22.5, 9, 15.6, 13.8, 11.6, 16.9, 6.2, 18, 0, 16.9, -6.2, 13.8, -11.6, 9, -15.6)
-

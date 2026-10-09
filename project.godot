@@ -29,6 +29,10 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/stretch/scale_mode="integer"
 
+[gui]
+
+theme/custom_font="res://Assets/fonts/fusion-pixel-12px-zh_hans.woff2"
+
 [input]
 
 up={

@@ -15,7 +15,7 @@ const SLASH_TIME: float = 0.12
 
 enum Item { SEED, WATER_CAN, BASKET, SWORD }
 
-const ITEM_NAMES: Array[String] = ["SEED", "WATER_CAN", "BASKET", "SWORD"]
+const ITEM_NAMES: Array[String] = ["种子袋", "水壶", "收获篮", "长剑"]
 
 signal died
 

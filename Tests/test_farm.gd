@@ -44,16 +44,28 @@ func _ready() -> void:
 		Level.animalRegion = region
 	_check("animalRegion2D 在 animalRegion 组里", region.is_in_group("animalRegion"))
 
-	var f: Font = ThemeDB.fallback_font
-	print("  INFO 默认字体支持中文 = ", f != null and f.has_char("水".unicode_at(0)))
+	var fallback: Font = ThemeDB.fallback_font
+	print("  INFO 内置默认字体支持中文 = ", fallback != null and fallback.has_char("水".unicode_at(0)))
 
 	var info := _level.get_node_or_null("HUD/InfoLabel") as Label
 	_check("HUD/InfoLabel 存在", info != null)
-	_check("HUD/HeldLabel 存在", _level.get_node_or_null("HUD/HeldLabel") != null)
+	var held := _level.get_node_or_null("HUD/HeldLabel") as Label
+	_check("HUD/HeldLabel 存在", held != null)
 	await get_tree().process_frame
+
+	# 真正决定渲染的是 Label 实际取到的字体，所以验证它，而不是内置字体
 	if info:
+		var lf: Font = info.get_theme_font("font")
+		_check("HUD 取到字体", lf != null)
+		_check("HUD 字体能画「金」", lf != null and lf.has_char("金".unicode_at(0)))
+		_check("HUD 字体能画「水」", lf != null and lf.has_char("水".unicode_at(0)))
+		if lf:
+			print("  INFO HUD 字体 = ", lf.get_font_name())
+			print("  INFO 抗锯齿=", lf.get("antialiasing"), " 微调=", lf.get("hinting"),
+				" 次像素=", lf.get("subpixel_positioning"))
 		print("  INFO HUD 文本 = ", info.text)
-		print("  INFO 手持提示 = ", (_level.get_node("HUD/HeldLabel") as Label).text)
+	if held:
+		print("  INFO 手持提示 = ", held.text)
 
 	print("--- 手持道具 ---")
 	_check("初始手持种子", _player.active_item == Player.Item.SEED)

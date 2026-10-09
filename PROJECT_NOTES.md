@@ -22,6 +22,7 @@
 
 ```
 Assets/kenney_tiny-{dungeon,farm,town}/   第三方素材（CC0，Kenney）
+Assets/fonts/                             Fusion Pixel Font 12px 简体（OFL），UI 中文字体
 Scenes/                                   所有场景，按类型分子目录
   base_level.tscn                         ← 真正的主场景
   game.tscn                               ⚠️ 空壳遗留，只有一行 Node2D
@@ -222,8 +223,14 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - ⚠️ 每个脚本旁边的同名 `.uid` 文件**属于版本控制**；移动/重命名脚本时必须连 `.uid` 一起处理。
 - 节点上的 `unique_id=` 是较新引擎字段，**手工新增节点时可以省略**（已实测）。
 - 所有文本文件是 **LF**（`.gitattributes` 有 `* text=auto eol=lf`）。
-- ⚠️ **Godot 内置字体不含中文字形**（`ThemeDB.fallback_font.has_char("水")` 实测 = false）。
-  Label **不能用中文**，会渲染成方块。
+- ⚠️ **Godot 内置字体不含中文字形**，Label 直接写中文会渲染成方块。本项目已引入中文字体解决：
+  `Assets/fonts/fusion-pixel-12px-zh_hans.woff2` —— **Fusion Pixel Font 12px 简体**，像素风、**OFL 协议**
+  （许可全文见同目录 `OFL-fusion-pixel-font.txt`），通过项目设置 `gui/theme/custom_font` 挂为全局默认字体。
+  - **字号必须用 12**（该字体的设计尺寸），配合窗口的整数倍缩放才是像素对齐的；用别的字号会发糊。
+  - 导入参数已刻意设成 `antialiasing=0 / hinting=0 / subpixel_positioning=0`（关抗锯齿、关微调、关次像素定位）。
+    换成别的字体、或重新导入后，要确认这三项还在（实测运行时读回来就是 0/0/0）。
+  - 正确验证方式：`label.get_theme_font("font").has_char("金".unicode_at(0))` ——
+    查 **Label 实际取到的那个字体**，而不是 `ThemeDB.fallback_font`。
 - ⚠️ 写死的节点路径（动 `base_level` 层级就会崩）：
   `land.gd` 的 `$"../level/Player"`、`$"../level/Static/Plants"`；
   `farm_controller.gd` 的 `$"../level/Static/Market"`。
@@ -246,12 +253,12 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **经济循环**：在商店（房子）里卖作物、买种子
 - **战斗循环**：野猪定时来啃作物，用剑砍跑它；被顶会掉血；晕倒损失一半金币
 - 水壶容量与水源自动补水
-- HUD：金币 / 血量 / 种子 / 作物 / 水量 / 手持物
+- HUD：**中文界面**，显示 金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
 **没做（打磨项）**
 - 只有一种作物（`current_crop_type` 恒为 0）
 - `Land` 的 terrain 1 在图集里定义好了但没代码使用
-- 音效、动画（攻击只有一刀白光）、中文 UI（需先放 CJK 字体）
+- 音效、动画（攻击只有一刀白光）
 - 存档
 - 野猪只是"啃掉作物"，没有更复杂的行为
 
@@ -314,4 +321,5 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 2 | 手持道具概念（Q 切换 + 单动作键分发） | ✅ |
 | 3 | 经济：卖作物、买种子、商店交互 | ✅ |
 | 4 | 战斗：野猪啃作物 + 剑 + 血量 + 刷新器 | ✅ |
-| 5 | 打磨：多种作物、音效、动画、中文 UI（需 CJK 字体）、存档 | ⬜ |
+| 5 | **中文 UI**（Fusion Pixel Font 12px，OFL） | ✅ |
+| 6 | 打磨：多种作物、音效、攻击动画、存档 | ⬜ |

@@ -945,23 +945,23 @@ navigation_polygon = SubResource("NavigationPolygon_wvhbo")
 script = ExtResource("10_hud")
 
 [node name="Backdrop" type="ColorRect" parent="HUD"]
-offset_right = 272.0
-offset_bottom = 34.0
+offset_right = 285.0
+offset_bottom = 42.0
 color = Color(0, 0, 0, 0.45)
 
 [node name="InfoLabel" type="Label" parent="HUD"]
-offset_left = 5.0
-offset_top = 3.0
-offset_right = 270.0
-offset_bottom = 19.0
-theme_override_font_sizes/font_size = 10
+offset_left = 6.0
+offset_top = 4.0
+offset_right = 283.0
+offset_bottom = 22.0
+theme_override_font_sizes/font_size = 12
 
 [node name="HeldLabel" type="Label" parent="HUD"]
-offset_left = 5.0
-offset_top = 19.0
-offset_right = 270.0
-offset_bottom = 33.0
-theme_override_font_sizes/font_size = 10
+offset_left = 6.0
+offset_top = 22.0
+offset_right = 283.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 12
 
 [node name="FarmController" type="Node" parent="."]
 script = ExtResource("11_fctl")
