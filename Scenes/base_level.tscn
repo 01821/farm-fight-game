@@ -979,6 +979,25 @@ offset_right = 318.0
 offset_bottom = 75.0
 theme_override_font_sizes/font_size = 12
 
+[node name="BannerBackdrop" type="ColorRect" parent="HUD"]
+visible = false
+offset_left = 120.0
+offset_top = 118.0
+offset_right = 280.0
+offset_bottom = 146.0
+color = Color(0, 0, 0, 0.7)
+
+[node name="Banner" type="Label" parent="HUD"]
+visible = false
+offset_left = 120.0
+offset_top = 118.0
+offset_right = 280.0
+offset_bottom = 146.0
+theme_override_font_sizes/font_size = 12
+text = "目标达成！\n谷仓建成了！"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="FarmController" type="Node" parent="."]
 script = ExtResource("11_fctl")
 

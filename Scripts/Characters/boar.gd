@@ -11,6 +11,8 @@ const CONTACT_RANGE: float = 12.0
 const CONTACT_DAMAGE: int = 1
 const CONTACT_COOLDOWN: float = 1.5
 const HIT_STUN: float = 0.25
+const KNOCKBACK_SPEED: float = 140.0
+const KNOCKBACK_DECAY: float = 9.0
 const GIVE_UP_TIME: float = 6.0
 const STUCK_TIME: float = 3.0
 const STUCK_EPSILON: float = 1.0
@@ -26,6 +28,7 @@ var _player: Player
 var _contact_cd: float = 0.0
 var _flash: float = 0.0
 var _stun: float = 0.0
+var _knockback: Vector2 = Vector2.ZERO
 var _idle_time: float = 0.0
 var _stuck_time: float = 0.0
 var _last_pos: Vector2 = Vector2.ZERO
@@ -36,7 +39,8 @@ func _ready() -> void:
 	_land = get_tree().get_first_node_in_group("farm_land")
 	_player = get_tree().get_first_node_in_group("player")
 
-func take_damage(amount: int) -> void:
+## from 是攻击者的位置，用来决定往哪个方向飞（给 Vector2.INF 就不击退）
+func take_damage(amount: int, from: Vector2 = Vector2.INF) -> void:
 	hp -= amount
 	print("[战斗] 野猪挨了一下，剩 ", hp, " 点血")
 	if hp <= 0:
@@ -45,11 +49,23 @@ func take_damage(amount: int) -> void:
 		return
 	_flash = 0.12
 	_stun = HIT_STUN
+	if from.is_finite():
+		var away: Vector2 = global_position - from
+		if away.length() > 0.01:
+			_knockback = away.normalized() * KNOCKBACK_SPEED
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_contact_cd = maxf(0.0, _contact_cd - delta)
 	_touch_player()
+
+	# 击退优先：被打飞的这段时间不寻路、也不受硬直影响
+	if _knockback.length() > 2.0:
+		velocity = _knockback
+		move_and_slide()
+		_knockback = _knockback.lerp(Vector2.ZERO, minf(1.0, KNOCKBACK_DECAY * delta))
+		_last_pos = global_position
+		return
 
 	# 受击硬直：短暂站住不动，否则玩家刚砍中它就已经跑出攻击范围了
 	if _stun > 0.0:

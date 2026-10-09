@@ -128,6 +128,7 @@ libraries/ = SubResource("AnimationLibrary_rmw3o")
 autoplay = &"Idle"
 
 [node name="debugLabel" type="Label" parent="." unique_id=903617642]
+visible = false
 offset_right = 40.0
 offset_bottom = 23.0
 theme_override_font_sizes/font_size = 12

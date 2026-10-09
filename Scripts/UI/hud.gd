@@ -12,13 +12,20 @@ extends CanvasLayer
 @onready var farm_label: Label = $FarmLabel
 @onready var held_label: Label = $HeldLabel
 @onready var key_label: Label = $KeyLabel
+@onready var banner: Label = $Banner
+@onready var banner_backdrop: ColorRect = $BannerBackdrop
 @onready var player: Player = $"../level/Player"
 @onready var cycle: DayCycle = $"../DayCycle"
 @onready var controller: FarmController = $"../FarmController"
 
 func _process(_delta: float) -> void:
+	# 达成目标时亮出横幅（节点是预建的，这里只切可见性）
+	var won: bool = controller.goal_reached
+	banner.visible = won
+	banner_backdrop.visible = won
+
 	var phase := "%s %d 秒" % [cycle.phase_name(), ceili(cycle.phase_time_left())]
-	if controller.goal_reached:
+	if won:
 		info_label.text = "第 %d 天   %s   目标已达成！" % [cycle.day, phase]
 	else:
 		info_label.text = "第 %d 天   %s   目标 %d/%d" % [

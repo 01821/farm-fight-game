@@ -130,6 +130,7 @@ libraries/ = SubResource("AnimationLibrary_cwhtp")
 autoplay = &"Idle"
 
 [node name="debugLabel" type="Label" parent="." unique_id=1351044096]
+visible = false
 offset_right = 40.0
 offset_bottom = 23.0
 theme_override_font_sizes/font_size = 12

@@ -96,7 +96,12 @@ func _ready() -> void:
 	_player.active_item = Player.Item.SWORD
 	_check("可以攻击", _player.can_attack() == true)
 	_check("攻击前刀光隐藏", _slash.visible == false)
+	var dist_before: float = _player.global_position.distance_to(boar.global_position)
 	_check("砍中野猪", _ctl.use_held_item() == true)
+	await get_tree().physics_frame
+	var dist_after: float = _player.global_position.distance_to(boar.global_position)
+	print("  INFO 与野猪距离 ", snappedf(dist_before, 0.1), " -> ", snappedf(dist_after, 0.1))
+	_check("砍中会把野猪击退", dist_after > dist_before)
 	_check("刀光出现", _slash.visible == true)
 	_check("野猪剩 1 点血", boar.hp == 1)
 	_check("攻击后进入冷却", _player.can_attack() == false)

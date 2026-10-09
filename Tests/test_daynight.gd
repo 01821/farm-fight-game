@@ -100,13 +100,19 @@ func _ready() -> void:
 	_check("白天画面重新变亮", _tint.color.r > 0.99)
 
 	print("--- 目标 ---")
+	var banner := _level.get_node("HUD/Banner") as Label
+	var banner_bg := _level.get_node("HUD/BannerBackdrop") as ColorRect
+	_check("未达成时横幅隐藏", banner.visible == false and banner_bg.visible == false)
 	_check("初始未达成", _controller.goal_reached == false)
 	_player.money = FarmController.GOLD_GOAL - 1
-	await _step(2)
+	await _step(3)
 	_check("差 1 金时未达成", _controller.goal_reached == false)
+	_check("差 1 金时横幅仍隐藏", banner.visible == false)
 	_player.money = FarmController.GOLD_GOAL
-	await _step(2)
+	await _step(3)
 	_check("达标后标记为达成", _controller.goal_reached == true)
+	_check("达成后横幅显示", banner.visible == true and banner_bg.visible == true)
+	print("  INFO 横幅文本 = ", banner.text.replace("\n", " / "))
 
 	var info := _level.get_node("HUD/InfoLabel") as Label
 	var farm := _level.get_node("HUD/FarmLabel") as Label

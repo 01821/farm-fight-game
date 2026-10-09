@@ -97,7 +97,8 @@ baseLevel (Node2D)
 │      physics_layer_0/collision_layer = 1 (Static)
 │      groups: navigation_polygon_source_geometry_group, farm_land
 ├── HUD (CanvasLayer)                   script = hud.gd
-│   ├── Backdrop / InfoLabel / HeldLabel
+│   ├── Backdrop / InfoLabel / FarmLabel / HeldLabel / KeyLabel（四行状态）
+│   └── BannerBackdrop + Banner（达成目标时亮出的横幅，平时 visible = false）
 ├── FarmController (Node)               script = farm_controller.gd ← F 键分发 + 目标判定
 ├── NightTint (CanvasModulate)          夜晚压暗画面（HUD 在 CanvasLayer 上，不受影响）
 ├── DayCycle (Node)                     script = DayCycle.gd ← 昼夜循环
@@ -256,6 +257,7 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 | 吃作物范围 | 10px，啃掉后自己离场 |
 | 顶玩家 | 12px 内扣 1 血，冷却 1.5s |
 | 受击硬直 | 0.25s（**重要**：否则玩家砍中后它还继续跑，追击手感极差） |
+| 击退 | 砍中时沿「远离玩家」方向推开，初速 140 px/s，按 9/s 衰减（`take_damage(伤害, 攻击者位置)`） |
 | 放弃条件 | 场上没作物 6 秒后离开；被卡住 3 秒后离开 |
 
 **玩家攻击**
@@ -346,6 +348,8 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
   A 查到的必然是 null（B 还没执行 `add_to_group`）。已踩过：`PestSpawner` 找 `DayCycle`。
   稳的做法是**两件都做**：场景里把 B 排在前面，**同时**让 A 支持之后补查一次，不依赖顺序。
 - `character.gd` 里的 `go()` / `dieOnCompany()` 和恒为 `false` 的 `workToAdd` 是**占位玩笑代码**。
+- 玩家和温顺动物头顶的 `debugLabel`（显示 `Idle` / `Move`）**已在场景里设成 `visible = false`**，
+  代码仍在往它写文本。想临时看状态机就把场景里的 `visible` 打开，别删节点（`Character` 依赖它存在）。
 - ⚠️ **测试必须掐掉存档**：`base_level` 上挂着 `SaveSystem`（默认启动自动读档 + 天亮自动存档）。
   其它测试实例化 `base_level` 时会读到玩家**真正的**存档，而 `test_daynight` 还会**覆盖**它。
   所有不测存档的测试，都要在第一帧之前设 `auto_load = false` 和 `auto_save_on_dawn = false`。
@@ -379,6 +383,8 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **存档**：天亮自动存、启动自动读，F5/F9/F10 手动控制
 - **多种作物**：5 种，按 1-5 切换；越贵单位时间收益越高
 - **音效**：10 个由代码合成的提示音，覆盖种植 / 浇水 / 收获 / 买卖 / 战斗 / 昼夜 / 目标
+- **打击感**：砍中野猪有刀光 + 受击闪红 + 硬直 + 击退
+- **胜利反馈**：攒够 300 金亮出「目标达成！谷仓建成了！」横幅
 - 水壶容量与水源自动补水
 - HUD：**中文界面**，显示 金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
@@ -433,7 +439,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 & $godot --headless --path . --fixed-fps 60 --quit-after 6000 2>&1 | Out-String
 ```
 
-合计 202 项断言。
+合计 206 项断言。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -464,4 +470,5 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 7 | 存档系统（天亮自动存 / 启动自动读 / F5 F9 F10） | ✅ |
 | 8 | 多种作物（5 种，1-5 切换，价格与生长时间各不相同） | ✅ |
 | 9 | **音效**（代码合成 10 个提示音 + 预建 AudioStreamPlayer 单例） | ✅ |
-| 10 | 打磨：攻击动画、击退、胜利反馈、清理调试标签 | ⬜ 下一步 |
+| 10 | 打磨：击退、胜利横幅、隐藏调试标签 | ✅ |
+| 11 | 还没做：攻击动画、更多敌种、昼夜影响生长速度、成就 | ⬜ |
