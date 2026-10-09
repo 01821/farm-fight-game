@@ -33,7 +33,8 @@ Scenes/                                   所有场景，按类型分子目录
   buildings/{house,water_bucket,water_container}.tscn   house = 商店
 Scripts/
   Global/Level.gd                         自动加载单例
-  Global/PestSpawner.gd                   class_name PestSpawner：野猪刷新器
+  Global/DayCycle.gd                      class_name DayCycle：昼夜循环
+  Global/PestSpawner.gd                   class_name PestSpawner：夜晚放野猪
   Characters/{character,player,base_animal}.gd
   Characters/boar.gd                      class_name Boar：野猪
   State/{State,state_machine}.gd          状态机基础设施
@@ -87,7 +88,9 @@ baseLevel (Node2D)
 │      groups: navigation_polygon_source_geometry_group, farm_land
 ├── HUD (CanvasLayer)                   script = hud.gd
 │   ├── Backdrop / InfoLabel / HeldLabel
-├── FarmController (Node)               script = farm_controller.gd ← F 键分发中心
+├── FarmController (Node)               script = farm_controller.gd ← F 键分发 + 目标判定
+├── NightTint (CanvasModulate)          夜晚压暗画面（HUD 在 CanvasLayer 上，不受影响）
+├── DayCycle (Node)                     script = DayCycle.gd ← 昼夜循环
 ├── PestSpawner (Node2D)                script = PestSpawner.gd，boar_scene 指向 boar.tscn
 └── level (Node2D, y_sort)
     ├── Static (Node2D, y_sort)
@@ -153,9 +156,24 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 5. `growStage` 到 4 即成熟，不能再浇。
 6. **收获**后作物销毁，格子空出可重种。
 
-### 经济
+### 经济与目标
 
 初始金币 20 / 种子 8；种子 3 金，作物 5 金。一个作物净赚 2 金。
+
+**目标**：金币达到 `FarmController.GOLD_GOAL = 300` 即判定「建成谷仓」（`goal_reached` 置位，HUD 显示"目标已达成！"）。
+
+### 昼夜循环
+
+| 项 | 值 |
+|---|---|
+| 一天长度 | `DayCycle.day_length = 45` 秒 |
+| 白天占比 | `day_ratio = 0.6`（前 27 秒白天，后 18 秒夜晚） |
+| 画面明暗 | 夜晚用预建的 `NightTint`(CanvasModulate) 渐变到 `Color(0.42, 0.48, 0.72)`，渐变 `FADE_TIME = 2` 秒 |
+| 波次规模 | `base_wave_size(2) + 天数 - 1`，上限 `max_wave_size(6)` |
+
+- **HUD 不会被压暗**：HUD 挂在 `CanvasLayer` 上，属于另一块画布，`CanvasModulate` 管不到它。
+- `DayCycle.running = false` 可冻结时间（测试用）。
+- 场上没作物时野猪会自己离开（`GIVE_UP_TIME` 6 秒）——所以"不种地就没有夜间威胁"是设计使然，不是 bug。
 
 ### 战斗
 
@@ -181,7 +199,12 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 | 血量 | 5 |
 | 晕倒惩罚 | 损失一半金币，被抬回出生点，血量补满 |
 
-**刷新器（PestSpawner）**：每 14 秒在玩家周围 165px 的环上刷一只，场上最多 3 只。
+**刷新器（PestSpawner）**：**只在夜晚出动**，天亮全部撤退。
+
+- 每夜按「波」刷新：入夜**立刻**来第一波，之后每 8 秒一波
+- 每波只数 = `DayCycle.wave_size()` = `base_wave_size + 天数 - 1`（上限 6）
+- 场上上限 6 只
+- 找不到 DayCycle 时退回 `always_active` 行为（给单元测试用）
 
 ---
 
@@ -234,6 +257,9 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - ⚠️ 写死的节点路径（动 `base_level` 层级就会崩）：
   `land.gd` 的 `$"../level/Player"`、`$"../level/Static/Plants"`；
   `farm_controller.gd` 的 `$"../level/Static/Market"`。
+- ⚠️ **`_ready` 是按兄弟节点顺序触发的**。若 A 在 `_ready` 里用**分组**查找 B，而 B 排在 A 后面，
+  A 查到的必然是 null（B 还没执行 `add_to_group`）。已踩过：`PestSpawner` 找 `DayCycle`。
+  稳的做法是**两件都做**：场景里把 B 排在前面，**同时**让 A 支持之后补查一次，不依赖顺序。
 - `character.gd` 里的 `go()` / `dieOnCompany()` 和恒为 `false` 的 `workToAdd` 是**占位玩笑代码**。
 - `game.tscn` 是空壳；`tree_2.tscn` / `tree_3.tscn` 没被任何场景引用。
 - 动物状态里 `speed` 在 `Update()` 每帧重新随机——速度一直在抖，疑似写错位置（野猪没这问题）。
@@ -251,7 +277,9 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **手持道具系统**：Q 切换 种子袋 / 水壶 / 收获篮 / 剑，HUD 实时显示
 - **完整农场循环**：播种 → 浇水 → 逐级生长 → 成熟 → 收获
 - **经济循环**：在商店（房子）里卖作物、买种子
-- **战斗循环**：野猪定时来啃作物，用剑砍跑它；被顶会掉血；晕倒损失一半金币
+- **战斗循环**：**夜晚**野猪成群来袭啃作物，用剑砍跑它；被顶会掉血；晕倒损失一半金币；天亮野猪撤退
+- **昼夜循环**：45 秒一天，夜晚画面变暗，难度随天数爬坡
+- **目标**：攒够 300 金建成谷仓
 - 水壶容量与水源自动补水
 - HUD：**中文界面**，显示 金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
@@ -290,12 +318,17 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 2) 农场 + 经济端到端（45 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_farm.tscn --quit-after 3000 2>&1 | Out-String
 
-# 3) 战斗端到端（29 项）
+# 3) 战斗端到端（30 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_combat.tscn --quit-after 3000 2>&1 | Out-String
 
-# 4) 跑主场景 30 秒，抓运行时错误
-& $godot --headless --path . --fixed-fps 60 --quit-after 1800 2>&1 | Out-String
+# 4) 昼夜 + 夜晚来袭 + 目标（26 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_daynight.tscn --quit-after 4000 2>&1 | Out-String
+
+# 5) 跑主场景 100 秒（约 2.2 个昼夜），抓运行时错误
+& $godot --headless --path . --fixed-fps 60 --quit-after 6000 2>&1 | Out-String
 ```
+
+合计 115 项断言。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -321,5 +354,6 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 2 | 手持道具概念（Q 切换 + 单动作键分发） | ✅ |
 | 3 | 经济：卖作物、买种子、商店交互 | ✅ |
 | 4 | 战斗：野猪啃作物 + 剑 + 血量 + 刷新器 | ✅ |
-| 5 | **中文 UI**（Fusion Pixel Font 12px，OFL） | ✅ |
-| 6 | 打磨：多种作物、音效、攻击动画、存档 | ⬜ |
+| 5 | 中文 UI（Fusion Pixel Font 12px，OFL） | ✅ |
+| 6 | **昼夜循环 + 夜晚成群来袭 + 目标** | ✅ |
+| 7 | 打磨：多种作物、音效、攻击动画、存档 | ⬜ |

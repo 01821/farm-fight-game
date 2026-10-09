@@ -9,6 +9,7 @@ var _land: FarmLand
 var _player: Player
 var _ctl: FarmController
 var _spawner: PestSpawner
+var _cycle: DayCycle
 var _spawn_pos: Vector2
 var _slash: Polygon2D
 
@@ -33,7 +34,9 @@ func _ready() -> void:
 	_player = _level.get_node("level/Player")
 	_ctl = _level.get_node("FarmController")
 	_spawner = _level.get_node("PestSpawner")
-	_spawner.auto_start = false
+	_cycle = _level.get_node("DayCycle")
+	# 冻结时间：本测试关心的是战斗本身，不想在跑测试时入夜自动刷野猪
+	_cycle.running = false
 	_spawn_pos = _player.global_position
 	_slash = _player.get_node("Slash")
 
@@ -43,6 +46,7 @@ func _ready() -> void:
 
 	print("--- 刷新器 ---")
 	_check("刷新器拿到了 boar_scene", _spawner.boar_scene != null)
+	_check("白天刷新器不活跃", _spawner.is_active() == false)
 	_check("场上初始没有野猪", _count_pests() == 0)
 	var boar: Boar = _spawner.spawn_one()
 	_check("spawn_one 返回实例", boar != null)

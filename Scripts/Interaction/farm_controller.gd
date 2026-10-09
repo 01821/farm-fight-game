@@ -6,9 +6,21 @@ class_name FarmController extends Node
 const ATTACK_RANGE: float = 26.0
 const ATTACK_DAMAGE: int = 1
 
+## 目标：攒够这么多金币就算「建成谷仓」
+const GOLD_GOAL: int = 300
+
 @onready var player: Player = $"../level/Player"
 @onready var land: FarmLand = $"../Land"
 @onready var market: Market = $"../level/Static/Market"
+
+var goal_reached: bool = false
+
+func _process(_delta: float) -> void:
+	if goal_reached:
+		return
+	if player.money >= GOLD_GOAL:
+		goal_reached = true
+		print("[目标] 攒够 ", GOLD_GOAL, " 金，谷仓建成了！")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("cycle_item"):
