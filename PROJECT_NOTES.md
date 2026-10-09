@@ -609,9 +609,12 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 
 # 14) 矿洞武器与技能（46 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_mine_skill.tscn --quit-after 4000 2>&1 | Out-String
+
+# 15) 矿洞进出与结算（35 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_mine_run.tscn --quit-after 4000 2>&1 | Out-String
 ```
 
-合计 472 项断言。
+合计 507 项断言。
 
 > ⚠️ **这些测试必须连跑三遍再下结论。** 已经踩过两次"单跑绿、连跑红"的偶发失败
 > （见第 7 节）。跑一遍不算验证过。
@@ -713,7 +716,8 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | C | 矿洞里的怪（机器人 / 蝙蝠）+ 简单 AI | ✅ |
 | D | `H U I O` 技能栏 + 冷却 + 能量 + **`L` 切换武器** | ✅ |
 | D2 | 还没做：`1/2/3` 消耗品 + `P` 技能表面板 + 武器贴图 | ⬜ |
-| E | 矿洞口进出自如 + 倒计时 + 死亡惩罚 + 回农场结算 | ⬜ 下一步 |
+| E | 矿洞口进出自如 + 倒计时 + 死亡惩罚 + 回农场结算 | ✅ |
+| F | 矿石/宝箱掉落接进商店经济（现在只有金币） | ⬜ 下一步 |
 | F | 矿石/宝箱/金币掉落，接进商店经济 |
 
 ### 🚨 阶段 A 踩到的两个坑（都会静默出错，务必记住）
@@ -849,6 +853,47 @@ lambda 改的是**副本**。要接收信号就老老实实写个方法 + 成员
 - `1/2/3` 消耗品道具栏
 - `P` 技能表面板（列出全部技能和说明）
 - 武器用图集里的贴图（现在是 Polygon2D 刀光变色区分）
+
+### 已实现（阶段 E：矿洞接进农场）
+
+`Scripts/Global/MineRun.gd`（自动加载单例）· `Scripts/buildings/mine_entrance.gd` + `Scenes/buildings/mine_entrance.tscn`
+`Scripts/Mine/mine_pickup.gd` + `Scenes/Mine/mine_pickup.tscn`
+
+**核心难题：切场景会丢掉农场的一切**（地块、每株作物、金币都在 `base_level` 里）。
+解法是**复用已有的存档系统**：进洞前 `SaveSystem.save_game()`，
+回来时它的「启动自动读档」把农场原样恢复。这样不用把农场塞进 autoload。
+
+- **矿洞口**（农场，`(350,180)`）：走近按 `F` 下矿。交互方式和水源/商店一致。
+- **火把 75 秒**：烧完自动回农场，**收获保留**。
+- **在洞里倒下 → 丢掉这趟收获**。因为存档是在**进洞之前**拍的，失败时什么都不用做。
+- **掉落**：怪死掉掉金币（`1 + 最大生命`），碰到自动捡走，钱记在 `MineRun.gold` 上，
+  **回农场才真的进钱包**。
+- 回农场后由矿洞口 `_settle_previous_run()` 结算一次（`consume_result()` 保证只结算一次）。
+
+### 🚨 阶段 E 的两个坑
+
+**坑 6：`MineLevel._ready()` 自动开局 → 测试里一死就真的切了场景。**
+
+原本写成「不在洞里就自动 `start_run()`」，方便直接在编辑器跑这个场景。
+结果 headless 测试里玩家一死就触发 `MineRun.finish()`，而 `finish()` 会
+`change_scene_to_file` —— **测试场景当场被换掉**，后面所有断言失效，
+报的错还完全看不出跟矿洞有关（是 `physics_frame` on null 之类）。
+
+修法：`_ready()` 里**不要**自动开局，只有真从矿洞口进来才有火把倒计时。
+另外给 `MineRun` 加了 `scene_switch_enabled`，测试里关掉即可。
+
+**坑 7：矿洞口压在农田上 → 玉米种不下去。**
+
+洞口交互半径 26px，而它离最近的农田格子只有 17.9px，
+于是站在那格按 `F` 被洞口分支抢走，`test_farm` 的玉米种植全挂 ——
+**报的错跟矿洞毫无关系，查了半天**。
+
+修法：把洞口挪到 `(350,180)`（离最近农田约 38px），
+并在 `test_mine_run` 里加了一条**永久断言**：
+「洞口不能压在任何农田上（要求 > 30px）」，`land.get_used_cells()` 挨个算距离。
+以后谁挪洞口挪坏了会立刻红。
+
+> 农田范围（实测）：**x 248~312 / y 136~184**。
 
 ### 待定（需要用户拍板）
 

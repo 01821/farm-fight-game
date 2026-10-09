@@ -1,0 +1,43 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/buildings/mine_entrance.gd" id="1_ent"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap_packed.png" id="2_tiles"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_mine"]
+radius = 26.0
+
+; 矿洞口：用图集里的梯子当"下矿的入口"，两格高。
+; InteractionArea 只找玩家层（2），交互方式和水源 / 商店一致。
+[node name="MineEntrance" type="Node2D"]
+script = ExtResource("1_ent")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -18)
+z_index = -1
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(198, 36, 18, 18)
+
+[node name="Sprite2D2" type="Sprite2D" parent="."]
+position = Vector2(0, 0)
+z_index = -1
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(198, 54, 18, 18)
+
+; 玩家走近时亮起来的提示（平时隐藏）
+[node name="ActiveSprite" type="Sprite2D" parent="."]
+visible = false
+position = Vector2(0, -30)
+z_index = 1
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(126, 36, 18, 18)
+
+[node name="InteractionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+position = Vector2(0, -10)
+shape = SubResource("CircleShape2D_mine")

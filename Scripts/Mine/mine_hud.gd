@@ -17,6 +17,7 @@ const COLOR_NO_ENERGY := Color(0.75, 0.5, 0.5)
 
 @onready var hearts_root: Node2D = $Hearts
 @onready var status_label: Label = $StatusLabel
+@onready var torch_label: Label = $TorchLabel
 @onready var hint: Label = $HintLabel
 
 var _player: MinePlayer
@@ -99,6 +100,13 @@ func _refresh_status() -> void:
 	status_label.text = "能量 %d/%d    武器 %s [L]切换%s" % [
 		int(_player.energy), MineCombatData.ENERGY_MAX, _player.weapon_name(), cost_txt
 	]
+	# 火把 + 这趟的收获
+	var torch: float = MineRun.torch_left
+	torch_label.text = "火把 %d 秒   收获 %d 金" % [ceili(torch), MineRun.gold]
+	if torch <= 10.0:
+		torch_label.add_theme_color_override("font_color", Color(1, 0.4, 0.3))
+	else:
+		torch_label.add_theme_color_override("font_color", Color(1, 0.86, 0.5))
 
 func set_hint(text: String) -> void:
 	hint.text = text

@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://Scripts/Global/SaveSystem.gd" id="15_save"]
 [ext_resource type="Script" path="res://Scripts/Global/Weather.gd" id="16_weather"]
 [ext_resource type="Script" path="res://Scripts/Global/Achievements.gd" id="17_ach"]
+[ext_resource type="PackedScene" path="res://Scenes/buildings/mine_entrance.tscn" id="18_mine"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -933,6 +934,12 @@ position = Vector2(216, 144)
 
 [node name="WaterContainer" parent="level/Static" unique_id=107477045 instance=ExtResource("9_rqtgi")]
 position = Vector2(128, 184)
+
+; 矿洞口。位置是**算出来的**：农田范围是 x 248~312 / y 136~184，
+; 交互半径 26px，所以洞口必须离农田 > 30px，否则站在那格按 F 会被洞口分支抢走、种不了地。
+; (350,180) 离最近的一格农田约 38px。test_mine_run 里有一条断言专门守着这件事。
+[node name="MineEntrance" parent="level/Static" instance=ExtResource("18_mine")]
+position = Vector2(350, 180)
 
 [node name="Animals" type="Node2D" parent="level" unique_id=2113591457]
 

@@ -23,6 +23,7 @@ var _booted: bool = false
 
 func _ready() -> void:
 	add_to_group("save_system")
+	add_to_group("save_system")
 
 func _process(_delta: float) -> void:
 	if _booted:

@@ -40,11 +40,67 @@ const SPAWN := "S"
 	"################################################",
 ])
 
+## 掉落物场景，在场景文件里预先接好
+@export var pickup_scene: PackedScene
+
 @onready var terrain: TileMapLayer = $Terrain
 @onready var player: MinePlayer = $MinePlayer
 
 func _ready() -> void:
 	build()
+	_hook_player()
+	# ⚠️ 这里**不要**自动 MineRun.start_run()。
+	#    踩过的坑：自动开局之后，测试里玩家一死就会触发 MineRun.finish()，
+	#    而 finish() 会真的 change_scene_to_file —— 测试场景当场被换掉，
+	#    后面所有断言全部失效，报的错还完全看不出跟矿洞有关。
+	#    现在只有真的从矿洞口进来（MineRun.active 已经是 true）才有火把倒计时。
+	if MineRun.active:
+		print("[矿洞] 火把 ", int(MineRun.torch_left), " 秒，烧完自动回农场")
+
+func _hook_player() -> void:
+	if player == null:
+		return
+	if not player.died.is_connected(_on_player_died):
+		player.died.connect(_on_player_died)
+
+## 每只怪死掉都掉一份金币，并计入这趟的战绩
+func _hook_enemies() -> void:
+	for n in get_tree().get_nodes_in_group("mine_enemy"):
+		var e := n as MineEnemy
+		if e != null and not e.died.is_connected(_on_enemy_died):
+			e.died.connect(_on_enemy_died)
+
+func _on_enemy_died(enemy: MineEnemy) -> void:
+	MineRun.add_kill()
+	if pickup_scene == null or not is_instance_valid(enemy):
+		return
+	var drop := pickup_scene.instantiate() as MinePickup
+	if drop == null:
+		return
+	add_child(drop)
+	drop.global_position = enemy.global_position + Vector2(0, -12)
+	drop.amount = 1 + enemy.max_hp
+	print("[矿洞] ", enemy.display_name(), " 掉了 ", drop.amount, " 金")
+
+## 这一趟结束：在洞里倒下就是失败，丢掉这趟收获
+func _on_player_died() -> void:
+	MineRun.finish(false)
+
+func _process(delta: float) -> void:
+	_hook_player()
+	_hook_enemies()
+	if not MineRun.active:
+		return
+	MineRun.torch_left = maxf(0.0, MineRun.torch_left - delta)
+	if MineRun.torch_left <= 0.0:
+		print("[矿洞] 火把烧完了，被送回农场")
+		MineRun.finish(true)
+
+## 火把剩余比例（HUD 用）
+func torch_ratio() -> float:
+	if MineRun.TORCH_TIME <= 0.0:
+		return 0.0
+	return clampf(MineRun.torch_left / MineRun.TORCH_TIME, 0.0, 1.0)
 
 ## 把 map 铺成瓦片。返回出生点的格子坐标。
 func build() -> Vector2i:

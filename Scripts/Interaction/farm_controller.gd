@@ -13,6 +13,7 @@ const GOLD_GOAL: int = 300
 @onready var land: FarmLand = $"../Land"
 @onready var market: Market = $"../level/Static/Market"
 @onready var cycle: DayCycle = $"../DayCycle"
+@onready var mine_entrance: MineEntrance = get_node_or_null("../level/Static/MineEntrance") as MineEntrance
 
 var goal_reached: bool = false
 
@@ -60,6 +61,9 @@ func select_seed(i: int) -> void:
 		print("[种子] 已经是 ", player.crop_name(), " 了")
 
 func use_held_item() -> bool:
+	# 矿洞口优先：站上去按 F 就下矿（和手持什么都无关）
+	if mine_entrance != null and mine_entrance.is_player_inside():
+		return mine_entrance.enter_mine()
 	# 站在商店里，交易优先
 	if market.is_player_inside():
 		match player.active_item:
