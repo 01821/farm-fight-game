@@ -163,6 +163,8 @@ Character (CharacterBody2D)      Scripts/Characters/character.gd
   原因：全局类名缓存在 `.godot/global_script_class_cache.cfg`，只有编辑器会更新它。
   命令：`godot --headless --path . --import`
 - **不要手写 UID**：`.tscn`/`.tres` 里的 `uid://` 由编辑器生成。**但 `ext_resource` 不带 `uid` 也能正常加载**（已实测），所以手工建场景时可以只写 `path`。
+- ⚠️ 每个脚本旁边有个同名 `.uid` 文件（Godot 4.4+），**它属于版本控制，别忽略**。
+  移动 / 重命名 / 删除脚本时，**必须连 `.uid` 一起处理**，否则会留下孤儿文件（已经踩过一次：`Scripts/_test_plant.gd.uid`）。
 - 节点上的 `unique_id=` 是较新引擎的字段，**手工新增节点时可以省略**（已实测可加载）。
 - 所有文本文件是 **LF**，`.gitattributes` 有 `* text=auto eol=lf`，别改成 CRLF。
 - ⚠️ **Godot 内置字体不含中文字形**（已用 `ThemeDB.fallback_font.has_char("水")` 实测 = false）。
