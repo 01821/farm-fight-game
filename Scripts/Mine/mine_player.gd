@@ -43,6 +43,11 @@ const HURT_KNOCKBACK_Y: float = -150.0
 const DASH_DAMAGE: int = 1
 const DASH_KNOCK: float = 90.0
 
+## 消耗品：回血药。开局带 3 瓶，每瓶回 2 点血。
+## 和技能是**两套分开的资源**（参考游戏里技能是 H U I O、物品是 1/2/3）。
+const POTION_START: int = 3
+const POTION_HEAL: int = 2
+
 ## 飘字场景，在场景文件里预先接好，不在代码里 load
 @export var damage_number_scene: PackedScene
 
@@ -50,6 +55,10 @@ var facing: int = 1
 var hp: int = MAX_HP
 var weapon_id: int = 0
 var energy: float = float(MineCombatData.ENERGY_MAX)
+## 回血药数量（这趟带进来的）
+var potions: int = POTION_START
+## P 键技能表开着没有
+var skill_list_open: bool = false
 ## 每个技能的剩余冷却
 var skill_cd: Array[float] = [0.0, 0.0, 0.0, 0.0]
 
@@ -113,6 +122,11 @@ func _physics_process(delta: float) -> void:
 		switch_weapon()
 	if Input.is_action_just_pressed("use_item"):
 		attack()
+	if Input.is_action_just_pressed("skill_list"):
+		skill_list_open = not skill_list_open
+		print("[矿洞] 技能表 ", "打开" if skill_list_open else "收起")
+	if Input.is_action_just_pressed("item_1"):
+		use_potion()
 	for i in range(MineCombatData.skill_count()):
 		if Input.is_action_just_pressed("skill_%d" % (i + 1)):
 			cast_skill(i)
@@ -213,6 +227,27 @@ func attack() -> int:
 
 func can_attack() -> bool:
 	return _attack_cd <= 0.0
+
+# --- 消耗品 ---
+
+## 喝一瓶回血药。返回有没有喝成（没药 / 满血 都会返回 false）。
+## 注意和技能是分开的两套资源：技能吃能量，药物吃瓶数。
+func use_potion() -> bool:
+	if potions <= 0:
+		print("[矿洞] 没药了")
+		return false
+	if hp >= MAX_HP:
+		print("[矿洞] 血是满的，留着吧")
+		return false
+	potions -= 1
+	var before: int = hp
+	hp = mini(hp + POTION_HEAL, MAX_HP)
+	Sfx.play("buy")
+	print("[矿洞] 喝药回 ", hp - before, " 点（", before, " -> ", hp, "），还剩 ", potions, " 瓶")
+	return true
+
+func can_use_potion() -> bool:
+	return potions > 0 and hp < MAX_HP
 
 # --- 技能 ---
 

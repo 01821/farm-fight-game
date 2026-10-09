@@ -18,6 +18,10 @@ const COLOR_NO_ENERGY := Color(0.75, 0.5, 0.5)
 @onready var hearts_root: Node2D = $Hearts
 @onready var status_label: Label = $StatusLabel
 @onready var torch_label: Label = $TorchLabel
+@onready var potion_label: Label = $PotionLabel
+@onready var skill_list_backdrop: ColorRect = $SkillListBackdrop
+@onready var skill_list_title: Label = $SkillListTitle
+@onready var skill_list_body: Label = $SkillListBody
 @onready var hint: Label = $HintLabel
 
 var _player: MinePlayer
@@ -54,6 +58,7 @@ func _process(_delta: float) -> void:
 	_refresh_hearts(_player.hp, _player.MAX_HP)
 	_refresh_skills()
 	_refresh_status()
+	_refresh_skill_list()
 
 ## 按当前血量刷新每一颗心：满 / 半 / 空。**一颗心 = 2 点血。**
 func _refresh_hearts(hp: int, max_hp: int) -> void:
@@ -107,6 +112,32 @@ func _refresh_status() -> void:
 		torch_label.add_theme_color_override("font_color", Color(1, 0.4, 0.3))
 	else:
 		torch_label.add_theme_color_override("font_color", Color(1, 0.86, 0.5))
+	# 消耗品（和技能是分开的两套资源）
+	potion_label.text = "[1] 回血药 x%d（回 %d 点）    [P] 技能表" % [_player.potions, MinePlayer.POTION_HEAL]
+	if _player.potions <= 0:
+		potion_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	else:
+		potion_label.add_theme_color_override("font_color", Color(0.75, 1, 0.8))
+
+## P 键技能表：列出每个技能的按键、消耗、冷却和说明
+func _refresh_skill_list() -> void:
+	var open: bool = _player.skill_list_open
+	skill_list_backdrop.visible = open
+	skill_list_title.visible = open
+	skill_list_body.visible = open
+	if not open:
+		return
+	skill_list_title.text = "技能表（按 P 收起）"
+	var lines: PackedStringArray = PackedStringArray()
+	for i in range(MineCombatData.skill_count()):
+		lines.append("[%s] %s   消耗%d  冷却%ds" % [
+			String(MineCombatData.skill_field(i, "key", "?")),
+			MineCombatData.skill_name(i),
+			int(MineCombatData.skill_field(i, "cost", 0)),
+			int(MineCombatData.skill_field(i, "cooldown", 0)),
+		])
+		lines.append("      " + MineCombatData.skill_desc(i))
+	skill_list_body.text = "\n".join(lines)
 
 func set_hint(text: String) -> void:
 	hint.text = text

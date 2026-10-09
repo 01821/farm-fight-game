@@ -103,6 +103,48 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 2
 
+[node name="PotionLabel" type="Label" parent="."]
+offset_left = 6.0
+offset_top = 60.0
+offset_right = 396.0
+offset_bottom = 78.0
+theme_override_colors/font_color = Color(0.75, 1, 0.8, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+
+; P 键技能表：整块都是预建的，脚本只切可见性和文本
+[node name="SkillListBackdrop" type="ColorRect" parent="."]
+visible = false
+offset_left = 24.0
+offset_top = 92.0
+offset_right = 376.0
+offset_bottom = 216.0
+color = Color(0.05, 0.05, 0.08, 0.92)
+
+[node name="SkillListTitle" type="Label" parent="."]
+visible = false
+offset_left = 32.0
+offset_top = 98.0
+offset_right = 368.0
+offset_bottom = 118.0
+theme_override_colors/font_color = Color(1, 0.95, 0.6, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="SkillListBody" type="Label" parent="."]
+visible = false
+offset_left = 32.0
+offset_top = 122.0
+offset_right = 368.0
+offset_bottom = 212.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.92)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+
 [node name="HintLabel" type="Label" parent="."]
 offset_left = 6.0
 offset_top = 282.0

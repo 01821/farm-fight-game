@@ -191,6 +191,60 @@ func _ready() -> void:
 	_player.cast_skill(3)
 	_check("治疗不会超过上限", _player.hp == MinePlayer.MAX_HP)
 
+	print("--- 消耗品：回血药（和技能是分开的两套资源） ---")
+	_reset_skills()
+	_player.potions = MinePlayer.POTION_START
+	_player.hp = MinePlayer.MAX_HP
+	_check("开局带 3 瓶药", _player.potions == 3)
+	_check("满血时不该喝", _player.can_use_potion() == false)
+	_check("满血时喝药被拒", _player.use_potion() == false)
+	_check("被拒时不消耗药", _player.potions == 3)
+
+	_player.hp = 2
+	_check("掉血后可以喝", _player.can_use_potion())
+	_check("喝药成功", _player.use_potion() == true)
+	print("  INFO 喝完血量 = ", _player.hp, "，剩 ", _player.potions, " 瓶")
+	_check("回 2 点血", _player.hp == 4)
+	_check("药少一瓶", _player.potions == 2)
+
+	_player.hp = MinePlayer.MAX_HP - 1
+	_player.use_potion()
+	_check("回血不会超过上限", _player.hp == MinePlayer.MAX_HP)
+
+	_player.potions = 0
+	_player.hp = 1
+	_check("没药了就喝不了", _player.use_potion() == false)
+	_check("没药时 can_use_potion 也是 false", _player.can_use_potion() == false)
+
+	print("--- P 技能表 ---")
+	var hud2 := _level.get_node("MineHud") as MineHud
+	var backdrop := _level.get_node("MineHud/SkillListBackdrop") as ColorRect
+	var body := _level.get_node("MineHud/SkillListBody") as Label
+	_check("技能表初始是收起的", _player.skill_list_open == false)
+	await _step(3)
+	_check("收起时面板隐藏", backdrop.visible == false)
+
+	_player.skill_list_open = true
+	await _step(3)
+	_check("打开后面板显示", backdrop.visible == true)
+	print("  INFO 技能表正文：")
+	for ln in body.text.split("\n"):
+		print("        ", ln)
+	_check("表里列出 4 个技能的名字",
+		("重斩" in body.text) and ("旋风斩" in body.text) and ("冲刺" in body.text) and ("治疗" in body.text))
+	_check("表里带按键提示", "H" in body.text and "U" in body.text and "I" in body.text and "O" in body.text)
+	_check("表里带说明文字", "伤害" in body.text or "回复" in body.text or "突进" in body.text)
+
+	_player.skill_list_open = false
+	await _step(3)
+	_check("再按一次收起", backdrop.visible == false)
+
+	var potion_label := _level.get_node("MineHud/PotionLabel") as Label
+	_player.potions = 2
+	await _step(3)
+	print("  INFO ", potion_label.text)
+	_check("HUD 显示药瓶数", "2" in potion_label.text and "回血药" in potion_label.text)
+
 	print("--- HUD 技能栏 ---")
 	var hud := _level.get_node("MineHud") as MineHud
 	var labels := hud.skill_labels()
