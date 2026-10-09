@@ -16,8 +16,9 @@ extends CanvasLayer
 @onready var controller: FarmController = $"../FarmController"
 
 func _process(_delta: float) -> void:
-	info_label.text = "第 %d 天   %s   金币 %d   血量 %d/%d" % [
-		cycle.day, cycle.phase_name(), player.money, player.hp, Player.MAX_HP
+	info_label.text = "第 %d 天   %s %d 秒   金币 %d   血量 %d/%d" % [
+		cycle.day, cycle.phase_name(), ceili(cycle.phase_time_left()),
+		player.money, player.hp, Player.MAX_HP
 	]
 	if controller.goal_reached:
 		farm_label.text = "种子 %d   作物 %d   水量 %d/%d   目标已达成！" % [
