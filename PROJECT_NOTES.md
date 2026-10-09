@@ -600,9 +600,12 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 
 # 11) 横版矿洞角色控制（32 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_mine.tscn --quit-after 4000 2>&1 | Out-String
+
+# 12) 矿洞战斗（29 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_mine_combat.tscn --quit-after 4000 2>&1 | Out-String
 ```
 
-合计 368 项断言。
+合计 397 项断言。
 
 > ⚠️ **这些测试必须连跑三遍再下结论。** 已经踩过两次"单跑绿、连跑红"的偶发失败
 > （见第 7 节）。跑一遍不算验证过。
@@ -700,8 +703,8 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 阶段 | 内容 |
 |---|---|
 | A | 横版角色控制：重力 / 走 / 跳 / 单向平台 / 摄像机跟随 | ✅ |
-| B | 近战攻击 + 命中判定 + 击退 + 受击硬直 + **飘字伤害数字** | ⬜ 下一步 |
-| C | 矿洞里的怪（机器人 / 蝙蝠）+ 简单 AI |
+| B | 近战攻击 + 命中判定 + 击退 + 受击硬直 + **飘字伤害数字** | ✅ |
+| C | 矿洞里的怪（机器人 / 蝙蝠）+ 简单 AI | ⬜ 下一步 |
 | D | `H U I O` 技能栏 + 冷却 + 能量 + `P` 技能表 + **`L` 切换武器** + `1/2/3` 消耗品 |
 | E | 矿洞口进出自如 + 倒计时 + 死亡惩罚 + 回农场结算 |
 | F | 矿石/宝箱/金币掉落，接进商店经济 |
@@ -745,6 +748,37 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 - 复用农场的 `left`/`right` 动作名，跳跃是新增的 `jump`（空格 / K）。
 
 实测手感数据：按住跳上升 **39.3px**（2 格多），轻点只有 **10.7px**；单向平台能从下方穿过、从上方站住。
+
+### 已实现（阶段 B：近战战斗 + 飘字伤害）
+
+`Scripts/Mine/mine_enemy.gd` + `Scenes/Mine/mine_enemy.tscn`（怪）
+`Scripts/Mine/damage_number.gd` + `Scenes/Mine/damage_number.tscn`（飘字）
+
+- **怪**共用一套脚本，`kind` 换一种就是换一种怪（绿机兵/蓝机兵/红炸怪/蝙蝠）。
+  挨打有**闪白 + 硬直 0.22s + 击退 130px/s**，血尽 `queue_free()` 并发 `died` 信号。
+- **攻击判定**用的是角色身上**预建的 `AttackBox`（Area2D）**，一直开着当查询区域，
+  攻击时直接 `get_overlapping_bodies()` —— 不用等一帧、也不用在运行时创建任何节点。
+  判定框每帧跟着 `facing` 摆到身前（朝左时 x 为负）。
+- **飘字**是预建场景，命中时 `instantiate()` 一个、设好文字和位置。弹出→上飘→淡出，0.55s 后自回收。
+
+### 🚨 阶段 B 又踩到两个坑
+
+**坑 4：不要在运行时给节点改名。**
+
+我本来想在 `_ready()` 里 `name = "绿机兵"` 让日志好看，结果
+**`get_node("EnemyA")` 全部返回 null** —— 场上明明有 3 只怪。改用单独的 `_title` 变量。
+
+**坑 5：GDScript 的 lambda 按值捕获局部变量。**
+
+```gdscript
+var flag := false
+enemy.died.connect(func(_e): flag = true)   # ❌ flag 永远是 false
+```
+lambda 改的是**副本**。要接收信号就老老实实写个方法 + 成员变量。
+
+**附带一条 API 设计教训**：`attack()` 原本只设冷却、不检查冷却（检查写在
+`_physics_process` 里），于是**任何直接调用都能绕过冷却**。冷却检查应该属于
+`attack()` 自己 —— 这样键盘、AI、测试走的是同一条路，绕不过去。
 
 ### 待定（需要用户拍板）
 

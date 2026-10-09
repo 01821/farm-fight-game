@@ -1,15 +1,22 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Mine/mine_player.gd" id="1_mp"]
 [ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap-characters_packed.png" id="2_chars"]
+[ext_resource type="PackedScene" path="res://Scenes/Mine/damage_number.tscn" id="3_dmg"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_mine"]
 size = Vector2(10, 18)
+
+; 攻击判定框：整块都是查询区域，不是实体碰撞。
+; collision_layer = 0（自己不参与碰撞），collision_mask = 4（只找敌人层）。
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_atk"]
+size = Vector2(24, 20)
 
 [node name="MinePlayer" type="CharacterBody2D"]
 collision_layer = 2
 collision_mask = 1
 script = ExtResource("1_mp")
+damage_number_scene = ExtResource("3_dmg")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(0, -12)
@@ -20,6 +27,22 @@ region_rect = Rect2(0, 24, 24, 24)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -9)
 shape = SubResource("RectangleShape2D_mine")
+
+[node name="AttackBox" type="Area2D" parent="."]
+position = Vector2(13, -10)
+collision_layer = 0
+collision_mask = 4
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackBox"]
+shape = SubResource("RectangleShape2D_atk")
+
+[node name="Slash" type="Polygon2D" parent="."]
+visible = false
+z_index = 1
+position = Vector2(10, -12)
+color = Color(1, 1, 1, 0.8)
+polygon = PackedVector2Array(0, -16, 7, -11, 11, -4, 12, 4, 11, 12, 7, 18, 0, 22, -2, 13, -4, 6, -5, 0, -4, -6, -2, -13)
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, -10)

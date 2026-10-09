@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Mine/mine_level.gd" id="1_lvl"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/mine_player.tscn" id="2_player"]
 [ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap_packed.png" id="3_tiles"]
+[ext_resource type="PackedScene" path="res://Scenes/Mine/mine_enemy.tscn" id="4_enemy"]
 
 ; ⚠️ 两个必须对齐的东西，错一个都不会报错、只会手感不对：
 ;    1) TileSet.tile_size **必须**和 texture_region_size 一样是 18×18。
@@ -32,6 +33,21 @@ script = ExtResource("1_lvl")
 
 [node name="Terrain" type="TileMapLayer" parent="."]
 tile_set = SubResource("TileSet_mine")
+
+; 敌人是**预建实例**，不是运行时 new 出来的。kind 换一种就是换一种怪。
+[node name="EnemyA" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(250, 198)
+kind = 0
+patrol_dir = -1
+
+[node name="EnemyB" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(400, 198)
+kind = 1
+
+[node name="EnemyBat" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(330, 130)
+kind = 3
+patrol_dir = -1
 
 [node name="MinePlayer" parent="." instance=ExtResource("2_player")]
 position = Vector2(40, 40)

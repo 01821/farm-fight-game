@@ -164,9 +164,18 @@ func _ready() -> void:
 	for i in range(12):
 		await get_tree().physics_frame
 	_player.money = 0
+	# ⚠️ 不能硬写「6 金变 8 金」：这一段把**囤积者也解锁了**（25% 概率多收一株），
+	#    篮子里是 1 个还是 2 个胡萝卜是随机的，售价自然跟着变。
+	#    所以按实际收获数量算期望值，这样测的仍然是"售价倍率有没有生效"。
+	var basket_before: int = _player.basket_total()
 	_ctl.use_held_item()      # 手持收获篮 = 卖
-	print("  INFO 卖完金币 = ", _player.money, "（胡萝卜原价 6）")
-	_check("农夫+批发把 6 金变成了 8 金", _player.money == 8)
+	var base_price: int = basket_before * CropData.sell_price(0)
+	var expected: int = int(round(float(base_price) * 1.35))
+	print("  INFO 篮子里 ", basket_before, " 个胡萝卜；原价 ", base_price,
+		" 金 → 农夫+批发后应为 ", expected, "，实际 ", _player.money)
+	_check("篮子里装了 1~2 个（囤积者可能多送一个）", basket_before >= 1 and basket_before <= 2)
+	_check("农夫+批发的售价倍率真的生效了", _player.money == expected)
+	_check("确实比原价高", _player.money > base_price)
 
 	# 园丁：浇水覆盖相邻格
 	_land.clear_all_plants()

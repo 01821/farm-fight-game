@@ -2,14 +2,20 @@ class_name MinePlayer extends CharacterBody2D
 
 ## 矿洞里的横版角色控制器。
 ##
-## 手感上做了四件事，少哪一件都会"感觉不对"：
+## 移动手感上做了四件事，少哪一件都会"感觉不对"：
 ##   1) **土狼时间**（coyote time）—— 刚走出平台边缘的一小段时间里仍然能跳
 ##   2) **跳跃缓冲**（jump buffer）—— 落地前一点点按跳，落地瞬间自动起跳
 ##   3) **可变跳跃高度** —— 松开跳跃键就上升速度砍半，轻点小跳、长按大跳
 ##   4) 加减速分离 —— 起步有个加速过程，松手有个刹车过程，不是瞬间启停
 ##
-## 左右沿用农场的 `left` / `right`（A / D）动作名，跳跃用新增的 `jump`（空格 / K）。
-## 复用同一套 InputMap 是为了避免"进了矿洞 WASD 不动"这类经典 bug。
+## 打击感上做了四件事（阶段 B）：
+##   闪白 / 受击硬直 / 击退 / **飘字伤害数字** —— 少一个都会"打上去没感觉"。
+##
+## 左右沿用农场的 `left` / `right`（A / D）动作名，跳跃用 `jump`（空格 / K），
+## 攻击用农场的 `use_item`（F / J）。复用同一套 InputMap 是为了避免
+## "进了矿洞 WASD 不动"这类经典 bug。
+
+signal attacked(hit_count: int)
 
 const SPEED: float = 112.0
 const ACCEL: float = 900.0
@@ -22,22 +28,46 @@ const JUMP_CUT: float = 0.42
 const COYOTE_TIME: float = 0.10
 const JUMP_BUFFER_TIME: float = 0.12
 
+const ATTACK_COOLDOWN: float = 0.34
+const ATTACK_TIME: float = 0.14
+const ATTACK_DAMAGE: int = 1
+## 判定框相对角色中心的水平偏移（朝右时；朝左时取负）
+const ATTACK_OFFSET: float = 13.0
+
+## 飘字场景，在场景文件里预先接好，不在代码里 load
+@export var damage_number_scene: PackedScene
+
 ## 1 = 朝右，-1 = 朝左
 var facing: int = 1
 
 var _coyote: float = 0.0
 var _jump_buffer: float = 0.0
-var _was_on_floor: bool = false
+var _attack_cd: float = 0.0
+var _slash_time: float = 0.0
 
 @onready var sprite: Sprite2D = $Sprite2D
+@onready var slash: Polygon2D = $Slash
+## 判定框是**预建的 Area2D**，一直开着当查询区域用 ——
+## 这样 get_overlapping_bodies() 拿到的就是当前这一帧的重叠结果，
+## 不用等一帧、也不用在运行时创建任何节点。
+@onready var attack_box: Area2D = $AttackBox
 
 func _physics_process(delta: float) -> void:
+	_attack_cd = maxf(0.0, _attack_cd - delta)
+	_update_slash(delta)
+
 	var dir: float = Input.get_axis("left", "right")
+	# 先定朝向，判定框才知道该摆在哪边
+	if absf(dir) > 0.01:
+		facing = 1 if dir > 0.0 else -1
+	attack_box.position.x = ATTACK_OFFSET * float(facing)
+
+	if Input.is_action_just_pressed("use_item"):
+		attack()
 
 	# --- 水平：加速 / 刹车分离 ---
 	if absf(dir) > 0.01:
 		velocity.x = move_toward(velocity.x, dir * SPEED, ACCEL * delta)
-		facing = 1 if dir > 0.0 else -1
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, FRICTION * delta)
 
@@ -46,8 +76,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = minf(velocity.y + GRAVITY * delta, MAX_FALL)
 
 	# --- 土狼时间 ---
-	_was_on_floor = is_on_floor()
-	if _was_on_floor:
+	if is_on_floor():
 		_coyote = COYOTE_TIME
 	else:
 		_coyote = maxf(0.0, _coyote - delta)
@@ -71,6 +100,64 @@ func _physics_process(delta: float) -> void:
 
 	if absf(velocity.x) > 1.0:
 		sprite.flip_h = velocity.x < 0.0
+
+# --- 攻击 ---
+
+## 挥砍。返回这一刀打中了几只；**冷却没到就返回 0**。
+## 冷却检查放在这里而不是调用方 —— 这样无论谁调（键盘、AI、测试）都绕不过去。
+func attack() -> int:
+	if _attack_cd > 0.0:
+		return 0
+	_attack_cd = ATTACK_COOLDOWN
+	_slash_time = ATTACK_TIME
+	slash.visible = true
+	var dir: float = float(facing)
+	slash.scale = Vector2(dir * 0.55, 0.55)
+	slash.modulate = Color(1, 1, 1, 0.95)
+
+	var hit: int = 0
+	for body in attack_box.get_overlapping_bodies():
+		var enemy := body as MineEnemy
+		if enemy == null or not is_instance_valid(enemy) or enemy.is_dead():
+			continue
+		enemy.take_damage(ATTACK_DAMAGE, global_position)
+		spawn_damage_number(ATTACK_DAMAGE, enemy.global_position + Vector2(0, -24))
+		hit += 1
+
+	if hit > 0:
+		Sfx.play("hit")
+	else:
+		print("[矿洞] 挥空了")
+	attacked.emit(hit)
+	return hit
+
+## 在指定位置飘一个伤害数字。会实例化**预建的**飘字场景，不 new 节点。
+func spawn_damage_number(amount: int, at: Vector2) -> void:
+	if damage_number_scene == null:
+		return
+	var n := damage_number_scene.instantiate() as DamageNumber
+	if n == null:
+		return
+	get_parent().add_child(n)
+	n.global_position = at
+	n.setup(str(amount))
+
+func can_attack() -> bool:
+	return _attack_cd <= 0.0
+
+func _update_slash(delta: float) -> void:
+	if _slash_time <= 0.0:
+		return
+	_slash_time = maxf(0.0, _slash_time - delta)
+	if _slash_time <= 0.0:
+		slash.visible = false
+		return
+	var t: float = 1.0 - _slash_time / ATTACK_TIME
+	var dir: float = float(facing)
+	var grow: float = lerpf(0.55, 1.35, t)
+	slash.scale = Vector2(dir * grow, grow)
+	slash.rotation = lerpf(-0.6, 0.5, t) * dir
+	slash.modulate = Color(1, 1, 1, lerpf(0.95, 0.0, t))
 
 func is_moving() -> bool:
 	return absf(velocity.x) > 1.0
