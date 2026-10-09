@@ -614,7 +614,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_mine_run.tscn --quit-after 4000 2>&1 | Out-String
 ```
 
-合计 526 项断言。
+合计 542 项断言。
 
 > ⚠️ **这些测试必须连跑三遍再下结论。** 已经踩过两次"单跑绿、连跑红"的偶发失败
 > （见第 7 节）。跑一遍不算验证过。
@@ -717,7 +717,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | D | `H U I O` 技能栏 + 冷却 + 能量 + **`L` 切换武器** | ✅ |
 | D2 | `1` 消耗品 + `P` 技能表 | ✅ |
 | E | 矿洞口进出自如 + 倒计时 + 死亡惩罚 + 回农场结算 | ✅ |
-| F | 矿石/宝箱掉落接进商店经济（现在只有金币） | ⬜ 下一步 |
+| F | 矿石/宝箱掉落接进商店经济 | ✅ |
 | F | 矿石/宝箱/金币掉落，接进商店经济 |
 
 ### 🚨 阶段 A 踩到的两个坑（都会静默出错，务必记住）
