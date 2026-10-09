@@ -21,17 +21,20 @@
 ## 2. 目录约定
 
 ```
-Assets/kenney_tiny-{dungeon,farm,town}/   第三方素材（CC0，Kenney），按包名分目录
+Assets/kenney_tiny-{dungeon,farm,town}/   第三方素材（CC0，Kenney）
 Scenes/                                   所有场景，按类型分子目录
   base_level.tscn                         ← 真正的主场景
   game.tscn                               ⚠️ 空壳遗留，只有一行 Node2D
   character/player.tscn
-  animals/base_animal.tscn
+  animals/base_animal.tscn                温顺的农场动物
+  animals/boar.tscn                       野猪（敌人），贴图取自 kenney_tiny-dungeon
   plants/{base_plant,tree_1,tree_2,tree_3}.tscn
   buildings/{house,water_bucket,water_container}.tscn   house = 商店
 Scripts/
   Global/Level.gd                         自动加载单例
+  Global/PestSpawner.gd                   class_name PestSpawner：野猪刷新器
   Characters/{character,player,base_animal}.gd
+  Characters/boar.gd                      class_name Boar：野猪
   State/{State,state_machine}.gd          状态机基础设施
   State/{Player,animal}/{idle,move}.gd    具体状态
   plants/base_plant.gd                    作物：浇水驱动生长
@@ -42,6 +45,9 @@ Scripts/
   UI/hud.gd                               左上角状态栏
 Tests/                                    一次性自测场景（开发用，见第 9 节）
 ```
+
+**常用分组（group）**：`farm_land`、`player`、`pest`、`pest_spawner`、`animalRegion`。
+脚本之间靠这些组找彼此，避免写死跨场景路径。
 
 ---
 
@@ -57,12 +63,12 @@ Tests/                                    一次性自测场景（开发用，�
 
 **2D 物理层命名**
 
-| 层 | 名字 | 谁在用 |
-|---|---|---|
-| 1 | Static | 地形碰撞、树的 TileSet 多边形 |
-| 2 | Player | 玩家（水源 / 商店的 Area2D 的 mask 都是这层） |
-| 3 | Animal | 动物 |
-| 4 | Plant | 作物 |
+| 层 | 值 | 名字 | 谁在用 |
+|---|---|---|---|
+| 1 | 1 | Static | 地形碰撞 |
+| 2 | 2 | Player | 玩家（水源 / 商店 Area2D 的 mask） |
+| 3 | 4 | Animal | 动物、野猪 |
+| 4 | 8 | Plant | 作物 |
 
 > 碰撞里请用这些语义，别写裸数字。
 
@@ -72,24 +78,22 @@ Tests/                                    一次性自测场景（开发用，�
 
 ```
 baseLevel (Node2D)
-├── background / Sample (Sprite2D)      底色 与 素材参考图
+├── background / Sample (Sprite2D)
 ├── Grass (TileMapLayer)                图集 = kenney_tiny-town
-├── Land (TileMapLayer)                 图集 = kenney_tiny-farm  →  script = land.gd (FarmLand)
+├── Land (TileMapLayer)                 →  script = land.gd (FarmLand)
 │      terrain_set 0: terrain 0 = 耕地（种植/浇水都要求 terrain 0）
 │      physics_layer_0/collision_layer = 1 (Static)
-│      group: navigation_polygon_source_geometry_group
+│      groups: navigation_polygon_source_geometry_group, farm_land
 ├── HUD (CanvasLayer)                   script = hud.gd
-│   ├── Backdrop (ColorRect)
-│   ├── InfoLabel (Label)               Gold / Seeds / Crops / Water
-│   └── HeldLabel (Label)               [Q] switch  [F] use  holding: XXX
+│   ├── Backdrop / InfoLabel / HeldLabel
 ├── FarmController (Node)               script = farm_controller.gd ← F 键分发中心
+├── PestSpawner (Node2D)                script = PestSpawner.gd，boar_scene 指向 boar.tscn
 └── level (Node2D, y_sort)
     ├── Static (Node2D, y_sort)
-    │   ├── Trees/                      100+ 个 tree_1.tscn 实例
-    │   ├── Plants/                     ← 运行时种植的作物挂在这里（初始为空）
+    │   ├── Trees/                      100+ 个 tree_1.tscn 实例（没有碰撞）
+    │   ├── Plants/                     ← 运行时种植的作物挂在这里
     │   ├── Market                      ← house.tscn 实例，带 Area2D，是商店
-    │   ├── waterBucket                 ← 水源（Area2D）
-    │   └── WaterContainer              ← 水源（Area2D）
+    │   ├── waterBucket / WaterContainer  ← 水源（Area2D）
     ├── Animals/                        base_animal.tscn 实例（1 只）
     ├── Player                          player.tscn 实例
     └── animalRegion2D (NavigationRegion2D)   group: animalRegion
@@ -103,29 +107,27 @@ baseLevel (Node2D)
 
 ```
 Character (CharacterBody2D)      Scripts/Characters/character.gd
-├── Player       class_name Player      移动输入 + 农场状态 + 手持道具
+├── Player       class_name Player      移动 + 农场状态 + 手持道具
 └── base_animal.gd  extends Character   持有 move_timer
 
-子节点结构（player.tscn / base_animal.tscn 都一样）：
-  Sprite2D, StateMachine(Node), AnimationPlayer, debugLabel, CollisionShape2D
-  动物额外有 NavigationAgent2D + MoveTimer
+Boar 是独立的 CharacterBody2D（不继承 Character —— Character 的 @onready 需要
+AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报错）
 ```
 
-- `state_machine.gd`：**子节点即状态**。`_ready` 注入 `stateMachine`/`character`，默认进 `get_child(0)`。
-- 切换用 `stateMachine.SwitchTo("Move")` —— **按节点名查找**。
+- `state_machine.gd`：**子节点即状态**，`SwitchTo()` 按节点名查找。
 
 > ⚠️ **三个名字必须一模一样**：`StateMachine` 下的节点名 == `SwitchTo()` 的字符串 == `AnimationPlayer` 里的动画名。
-> 因为 `Character.UpdateAnimation()` 直接 `play(state_machine.currentState.name)`。新增状态时三处一起加。
 
-### 手持道具模型（核心交互设计）
+### 手持道具模型
 
 玩家手上永远只有一样东西，`Q` 循环切换：
 
 | 手持 | 说明 |
 |---|---|
 | `Player.Item.SEED` | 种子袋 |
-| `Player.Item.WATER_CAN` | 水壶（还有 `water_left` 水量，容量 5） |
-| `Player.Item.BASKET` | 收获篮（`player.harvested` 就是篮子里的作物数） |
+| `Player.Item.WATER_CAN` | 水壶（`water_left`，容量 5） |
+| `Player.Item.BASKET` | 收获篮（`player.harvested`） |
+| `Player.Item.SWORD` | 剑 |
 
 **只有一个动作键 `F`**，效果由「手持道具 + 所在位置」决定，全部逻辑在 `FarmController.use_held_item()`：
 
@@ -134,51 +136,75 @@ Character (CharacterBody2D)      Scripts/Characters/character.gd
 | 种子袋 | 耕地格 | 播种（扣 1 种子） |
 | 种子袋 | 商店范围内 | 买 1 粒种子（扣 3 金） |
 | 水壶 | 有作物的格 | 浇水（扣 1 水） |
-| 水壶 | 商店范围内 | 无效，提示 |
 | 收获篮 | 成熟作物格 | 收获（作物进篮子） |
 | 收获篮 | 商店范围内 | 卖掉篮子里全部作物（每个 +5 金） |
+| 剑 | 任意位置 | 砍范围内所有野猪 |
+| 其它 | 商店范围内 | 无效，给提示 |
 
 > 注意 **商店优先**：站在商店范围内即使脚下是耕地，也走交易而不是播种。
 
 ### 农场循环规则
 
-1. **播种**要求 terrain 0 的耕地、该格没种过、`player.seeds > 0`。作物实例化后挂到 `level/Static/Plants`。
+1. **播种**要求 terrain 0 的耕地、该格没种过、`player.seeds > 0`。
 2. **种下后不会自己生长**。
 3. **浇水**后该格出现蓝色湿痕（`WetMark`）。
 4. `growTime`（默认 3 秒）后升 **一级** 并**自动变干**——下一级要再浇一次。
-5. `growStage` 到 4 即成熟（`is_mature()`），不能再浇。
+5. `growStage` 到 4 即成熟，不能再浇。
 6. **收获**后作物销毁，格子空出可重种。
 
 ### 经济
 
+初始金币 20 / 种子 8；种子 3 金，作物 5 金。一个作物净赚 2 金。
+
+### 战斗
+
+**野猪（Boar）** `Scripts/Characters/boar.gd`
+
 | 项 | 值 |
 |---|---|
-| 初始金币 / 种子 | 20 / 8 |
-| 种子售价 | 3 金 |
-| 作物收购价 | 5 金 |
+| 血量 | 2 |
+| 速度 | 38 px/s（直线冲向最近的作物，不寻路） |
+| 吃作物范围 | 10px，啃掉后自己离场 |
+| 顶玩家 | 12px 内扣 1 血，冷却 1.5s |
+| 受击硬直 | 0.25s（**重要**：否则玩家砍中后它还继续跑，追击手感极差） |
+| 放弃条件 | 场上没作物 6 秒后离开；被卡住 3 秒后离开 |
 
-一个作物净赚 2 金。金币不够时买种子会被拒。
+**玩家攻击**
 
-### 数据流
+| 项 | 值 |
+|---|---|
+| 攻击范围 | 26px 圆形（范围内**所有**野猪一起掉血，不做扇形） |
+| 伤害 | 1 |
+| 冷却 | 0.35s |
+| 刀光 | 复用 `player.tscn` 里预建的 `Slash`(Polygon2D)，命中时显示 0.12s，按朝向翻转 `scale.x` |
+| 血量 | 5 |
+| 晕倒惩罚 | 损失一半金币，被抬回出生点，血量补满 |
 
-- 作物状态（阶段 / 是否浇过水）**归作物自己管**，`FarmLand` 只持有 `plants: Dictionary[Vector2i -> BasePlant]`。
-- 玩家状态（手持物 / 水 / 种子 / 收成 / 钱）归 `Player`。
-- HUD 每帧直接读 `Player`，不用信号同步。
+**刷新器（PestSpawner）**：每 14 秒在玩家周围 165px 的环上刷一只，场上最多 3 只。
 
 ---
 
-## 6. 素材图集坐标（kenney_tiny-farm/Tilemap/tilemap_packed.png）
+## 6. 素材图集坐标
 
-单格 16×16，图集 12 列。已用的 `region_rect`：
+**kenney_tiny-farm/Tilemap/tilemap_packed.png**（192×176，12 列 × 11 行，每格 16px）
 
 | 对象 | region_rect |
 |---|---|
 | 玩家 | `Rect2(16, 144, 16, 16)` |
-| 动物 | `Rect2(0, 160, 16, 16)` |
-| 作物（按 growStage / plantType 算） | `Rect2(64 + 16*stage, 16*type, 16, 16)`，stage 0→4 即 x 从 64 到 128 |
+| 温顺动物 | `Rect2(0, 160, 16, 16)` |
+| 作物（按 growStage / plantType） | `Rect2(64 + 16*stage, 16*type, 16, 16)`，stage 0→4 即 x 从 64 到 128 |
 | tree_1 | `Rect2(48, 0, 16, 32)` |
-| 水桶 / 水桶(激活) | `Rect2(0, 96, 16, 16)` / `Rect2(16, 96, 16, 16)` |
-| 水缸 / 水缸(激活) | `Rect2(32, 128, 32, 16)` / `Rect2(32, 144, 32, 16)` |
+| 水桶 / 激活 | `Rect2(0, 96, 16, 16)` / `Rect2(16, 96, 16, 16)` |
+| 水缸 / 激活 | `Rect2(32, 128, 32, 16)` / `Rect2(32, 144, 32, 16)` |
+
+**kenney_tiny-dungeon/Tilemap/tilemap_packed.png**（同样 192×176 / 12×11）——已用 4 倍放大逐格确认过：
+
+| 行 | 内容 |
+|---|---|
+| 行 9 (y144) | 绿史莱姆(0)、褐软泥(1)、红恶魔(2)、棕怪(3)、绿衣人(4)；后面是药水、武器 |
+| 行 10 (y160) | 橙小怪(0)、幽灵(1)、暗红蜘蛛(2)、**獠牙野猪(3)**、绿菇怪(4)；后面是法杖 |
+
+野猪用 **`Rect2(48, 160, 16, 16)`**。
 
 全部素材为 **CC0（Kenney）**，各目录下有 `License.txt`。
 
@@ -189,20 +215,24 @@ Character (CharacterBody2D)      Scripts/Characters/character.gd
 - **不要手改 `.godot/`**：生成目录，已 gitignore。
 - ⚠️ **在编辑器之外新建 `class_name` 后，必须重新导入一次**，否则其他脚本会报
   `Parse Error: Could not find type "XXX" in the current scope`。
-  原因：全局类名缓存在 `.godot/global_script_class_cache.cfg`，只有编辑器会更新它。
   命令：`godot --headless --path . --import`
-- **不要手写 UID**：`.tscn`/`.tres` 里的 `uid://` 由编辑器生成。**但 `ext_resource` 不带 `uid` 也能正常加载**（已实测），所以手工建场景时可以只写 `path`。
-- ⚠️ 每个脚本旁边有个同名 `.uid` 文件（Godot 4.4+），**它属于版本控制，别忽略**。
-  移动 / 重命名 / 删除脚本时，**必须连 `.uid` 一起处理**，否则会留下孤儿文件（已踩过）。
-- 节点上的 `unique_id=` 是较新引擎的字段，**手工新增节点时可以省略**（已实测可加载）。
-- 所有文本文件是 **LF**，`.gitattributes` 有 `* text=auto eol=lf`，别改成 CRLF。
-- ⚠️ **Godot 内置字体不含中文字形**（已用 `ThemeDB.fallback_font.has_char("水")` 实测 = false）。
-  HUD/`debugLabel` 等 Label **不能用中文**，会渲染成方块。要中文必须往项目里放一个 CJK 字体。
-- ⚠️ `land.gd` 里节点路径是写死的 `$"../level/Player"`、`$"../level/Static/Plants"`；
-  `farm_controller.gd` 写死了 `$"../level/Static/Market"` —— **动 `base_level` 层级就会崩**。
-- `character.gd` 里的 `go()` / `dieOnCompany()` 和恒为 `false` 的 `workToAdd` 是**占位玩笑代码，不是真逻辑**。
+- ⚠️ **`Node` 没有 `global_position`**（那是 `Node2D` 的属性）。需要坐标的节点必须 `extends Node2D`，
+  否则是**解析期报错**（已踩过：`PestSpawner`）。
+- **不要手写 UID**：`ext_resource` 不带 `uid` 也能正常加载（已实测），手工建场景可以只写 `path`。
+- ⚠️ 每个脚本旁边的同名 `.uid` 文件**属于版本控制**；移动/重命名脚本时必须连 `.uid` 一起处理。
+- 节点上的 `unique_id=` 是较新引擎字段，**手工新增节点时可以省略**（已实测）。
+- 所有文本文件是 **LF**（`.gitattributes` 有 `* text=auto eol=lf`）。
+- ⚠️ **Godot 内置字体不含中文字形**（`ThemeDB.fallback_font.has_char("水")` 实测 = false）。
+  Label **不能用中文**，会渲染成方块。
+- ⚠️ 写死的节点路径（动 `base_level` 层级就会崩）：
+  `land.gd` 的 `$"../level/Player"`、`$"../level/Static/Plants"`；
+  `farm_controller.gd` 的 `$"../level/Static/Market"`。
+- `character.gd` 里的 `go()` / `dieOnCompany()` 和恒为 `false` 的 `workToAdd` 是**占位玩笑代码**。
 - `game.tscn` 是空壳；`tree_2.tscn` / `tree_3.tscn` 没被任何场景引用。
-- 动物状态里 `speed` 在 `Update()` 每帧重新随机（`randi_range`）—— 速度一直在抖，疑似写错位置。
+- 动物状态里 `speed` 在 `Update()` 每帧重新随机——速度一直在抖，疑似写错位置（野猪没这问题）。
+- ⚠️ **测试里必须手动补 `Level.animalRegion`**：测试场景不是主场景，自动加载 `Level` 的 `_ready`
+  在 `base_level` 实例化之前就跑完了，拿不到导航区域；不补的话动物切到 Move 状态会报
+  `Invalid access to property 'navigation_polygon' on null instance`。
 
 ---
 
@@ -210,20 +240,20 @@ Character (CharacterBody2D)      Scripts/Characters/character.gd
 
 **已能玩**
 - 玩家 WASD 移动 + Idle/Move 状态切换 + 动画
-- 动物 Idle/Move + `NavigationAgent2D` 随机漫游
-- **手持道具系统**：Q 切换 种子袋 / 水壶 / 收获篮，HUD 实时显示
+- 农场动物随机漫游
+- **手持道具系统**：Q 切换 种子袋 / 水壶 / 收获篮 / 剑，HUD 实时显示
 - **完整农场循环**：播种 → 浇水 → 逐级生长 → 成熟 → 收获
-- **经济循环**：在商店（房子）里拿篮卖作物、拿种子袋买种子；钱不够会被拒
+- **经济循环**：在商店（房子）里卖作物、买种子
+- **战斗循环**：野猪定时来啃作物，用剑砍跑它；被顶会掉血；晕倒损失一半金币
 - 水壶容量与水源自动补水
-- 左上角 HUD 实时显示 金币 / 种子 / 作物 / 水量 / 手持物
+- HUD：金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
-**半成品**
-- `plantType` 有字段但 `current_crop_type` 恒为 0，只有一种作物
-- `Land` 的 terrain 1 在图集里定义好了，但没代码使用
-
-**没做**
-- 战斗（项目名里的 `Fight` 一行代码都没有）
-- 存档、音效、中文 UI
+**没做（打磨项）**
+- 只有一种作物（`current_crop_type` 恒为 0）
+- `Land` 的 terrain 1 在图集里定义好了但没代码使用
+- 音效、动画（攻击只有一刀白光）、中文 UI（需先放 CJK 字体）
+- 存档
+- 野猪只是"啃掉作物"，没有更复杂的行为
 
 ---
 
@@ -248,28 +278,31 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 & $godot --headless --path . --import
 
 # 1) 作物单元自测（11 项）
-& $godot --headless --path . --fixed-fps 60 res://Tests/test_plant.tscn --quit-after 2400 2>&1 | Out-String
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_plant.tscn --quit-after 3000 2>&1 | Out-String
 
-# 2) 端到端自测（44 项）：手持道具 + 农场循环 + 商店经济 + 水源 + HUD
-& $godot --headless --path . --fixed-fps 60 res://Tests/test_farm.tscn --quit-after 2400 2>&1 | Out-String
+# 2) 农场 + 经济端到端（45 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_farm.tscn --quit-after 3000 2>&1 | Out-String
 
-# 3) 跑主场景 15 秒，抓运行时错误
-& $godot --headless --path . --fixed-fps 60 --quit-after 900 2>&1 | Out-String
+# 3) 战斗端到端（29 项）
+& $godot --headless --path . --fixed-fps 60 res://Tests/test_combat.tscn --quit-after 3000 2>&1 | Out-String
+
+# 4) 跑主场景 30 秒，抓运行时错误
+& $godot --headless --path . --fixed-fps 60 --quit-after 1800 2>&1 | Out-String
 ```
 
 要点：
-- `--fixed-fps 60` 让时间步长确定，定时器/生长行为可复现。
-- `--quit-after N` 是**帧数**，不是秒；配合 `--fixed-fps 60` 时 900 帧 = 15 秒。
+- `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
+- `--quit-after N` 是**帧数**，不是秒；配合 `--fixed-fps 60` 时 1800 帧 = 30 秒。
 - 测试脚本用 `_check(说明, 条件)` 打印 `PASS`/`FAIL`，结尾打印 `RESULT fail=N`。
 - 端到端测试**尽量走 `FarmController.use_held_item()`**（玩家真实路径），而不是直接调底层方法。
-- 注入故障后引擎会打出带 `文件:行号` 和 GDScript 调用栈的 `ERROR`，**验证链路是可信的**（已实测）。
+- 需要 Area2D 检测（商店/水源）时，把玩家 `global_position` 挪过去后要 `await physics_frame` 若干帧。
+- 注入故障后引擎会打出带 `文件:行号` 和 GDScript 调用栈的 `ERROR`，**验证链路可信**（已实测）。
 
 ### 查文档，别凭记忆
 
-- 首选编辑器内置帮助（F1）——版本一定对得上。
+- 首选编辑器内置帮助（F1）。
 - 在线：<https://docs.godotengine.org/en/4.7/>
-- 怀疑某个 API 行为变了：<https://docs.godotengine.org/en/4.7/tutorials/migrating/upgrading_to_godot_4.7.html>
-- 本项目引擎版本（4.7）比多数社区教程新，**默认不可信**。
+- 破坏性变更：<https://docs.godotengine.org/en/4.7/tutorials/migrating/upgrading_to_godot_4.7.html>
 
 ---
 
@@ -280,5 +313,5 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 1 | 浇水 → 成熟 → 收获 闭环 | ✅ |
 | 2 | 手持道具概念（Q 切换 + 单动作键分发） | ✅ |
 | 3 | 经济：卖作物、买种子、商店交互 | ✅ |
-| 4 | **战斗**：会来破坏农场的敌人 + 玩家攻击 | ⬜ 下一步 |
-| 5 | 打磨：多种作物、音效、中文 UI（需 CJK 字体）、存档 | ⬜ |
+| 4 | 战斗：野猪啃作物 + 剑 + 血量 + 刷新器 | ✅ |
+| 5 | 打磨：多种作物、音效、动画、中文 UI（需 CJK 字体）、存档 | ⬜ |

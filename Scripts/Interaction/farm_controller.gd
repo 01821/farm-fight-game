@@ -3,6 +3,9 @@ class_name FarmController extends Node
 ## 唯一动作键 F 的分发中心：按「手持道具 + 所在位置」决定要干什么。
 ## Q 切换手持道具。
 
+const ATTACK_RANGE: float = 26.0
+const ATTACK_DAMAGE: int = 1
+
 @onready var player: Player = $"../level/Player"
 @onready var land: FarmLand = $"../Land"
 @onready var market: Market = $"../level/Static/Market"
@@ -23,8 +26,11 @@ func use_held_item() -> bool:
 			Player.Item.BASKET:
 				return market.sell_crops(player)
 			_:
-				print("[商店] 拿着水壶没法交易")
+				print("[商店] 拿着 ", player.item_name(), " 没法交易")
 				return false
+
+	if player.active_item == Player.Item.SWORD:
+		return attack()
 
 	var tile: Vector2i = land.get_player_tile()
 	match player.active_item:
@@ -35,3 +41,23 @@ func use_held_item() -> bool:
 		Player.Item.BASKET:
 			return land.try_harvest_at(tile)
 	return false
+
+## 砍一圈：范围内所有野猪各掉 ATTACK_DAMAGE 点血
+func attack() -> bool:
+	if not player.can_attack():
+		print("[战斗] 挥太快了，喘口气")
+		return false
+	player.begin_attack_cooldown()
+	var hit: int = 0
+	for node in get_tree().get_nodes_in_group("pest"):
+		var boar := node as Boar
+		if boar == null or not is_instance_valid(boar):
+			continue
+		if player.global_position.distance_to(boar.global_position) <= ATTACK_RANGE:
+			boar.take_damage(ATTACK_DAMAGE)
+			hit += 1
+	if hit == 0:
+		print("[战斗] 挥空了，附近没有野猪")
+		return false
+	print("[战斗] 砍中 ", hit, " 只野猪")
+	return true

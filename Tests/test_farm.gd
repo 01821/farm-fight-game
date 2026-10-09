@@ -57,13 +57,14 @@ func _ready() -> void:
 
 	print("--- 手持道具 ---")
 	_check("初始手持种子", _player.active_item == Player.Item.SEED)
-	var start: int = _player.active_item
 	_player.cycle_item()
 	_check("切换一次 -> 水壶", _player.active_item == Player.Item.WATER_CAN)
 	_player.cycle_item()
 	_check("再切一次 -> 收获篮", _player.active_item == Player.Item.BASKET)
 	_player.cycle_item()
-	_check("切三下回到种子", _player.active_item == start)
+	_check("再切一次 -> 剑", _player.active_item == Player.Item.SWORD)
+	_player.cycle_item()
+	_check("切四下回到种子", _player.active_item == Player.Item.SEED)
 
 	print("--- 找耕地 ---")
 	var farm_tiles: Array[Vector2i] = []

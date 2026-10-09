@@ -13,6 +13,8 @@
 [ext_resource type="PackedScene" uid="uid://byymy2kf1g38r" path="res://Scenes/buildings/water_container.tscn" id="9_rqtgi"]
 [ext_resource type="Script" path="res://Scripts/UI/hud.gd" id="10_hud"]
 [ext_resource type="Script" path="res://Scripts/Interaction/farm_controller.gd" id="11_fctl"]
+[ext_resource type="Script" path="res://Scripts/Global/PestSpawner.gd" id="12_pest"]
+[ext_resource type="PackedScene" path="res://Scenes/animals/boar.tscn" id="13_boar"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -943,24 +945,29 @@ navigation_polygon = SubResource("NavigationPolygon_wvhbo")
 script = ExtResource("10_hud")
 
 [node name="Backdrop" type="ColorRect" parent="HUD"]
-offset_right = 252.0
+offset_right = 272.0
 offset_bottom = 34.0
 color = Color(0, 0, 0, 0.45)
 
 [node name="InfoLabel" type="Label" parent="HUD"]
 offset_left = 5.0
 offset_top = 3.0
-offset_right = 250.0
+offset_right = 270.0
 offset_bottom = 19.0
 theme_override_font_sizes/font_size = 10
 
 [node name="HeldLabel" type="Label" parent="HUD"]
 offset_left = 5.0
 offset_top = 19.0
-offset_right = 250.0
+offset_right = 270.0
 offset_bottom = 33.0
 theme_override_font_sizes/font_size = 10
 
 [node name="FarmController" type="Node" parent="."]
 script = ExtResource("11_fctl")
+
+[node name="PestSpawner" type="Node2D" parent="."]
+position = Vector2(240, 192)
+script = ExtResource("12_pest")
+boar_scene = ExtResource("13_boar")
 

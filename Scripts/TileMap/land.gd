@@ -2,6 +2,7 @@ class_name FarmLand extends TileMapLayer
 
 ## 耕地层：播种 / 浇水 / 收获的具体规则。
 ## 键盘输入不在这里 —— 由 FarmController 按「手持道具 + 所在位置」统一分发。
+## 自己加入 "farm_land" 组，好让野猪能找到作物。
 
 const BASE_PLANT = preload("uid://orgflfd17epj")
 
@@ -11,6 +12,9 @@ const BASE_PLANT = preload("uid://orgflfd17epj")
 ## 格子坐标 -> 作物实例
 var plants: Dictionary = {}
 var current_crop_type: int = 0
+
+func _ready() -> void:
+	add_to_group("farm_land")
 
 func get_player_tile() -> Vector2i:
 	return local_to_map(to_local(player.global_position))
@@ -69,4 +73,14 @@ func try_harvest_at(tile_pos: Vector2i) -> bool:
 	plant.queue_free()
 	player.harvested += 1
 	print("[农场] 收获成功！篮子里有 ", player.harvested, " 个作物")
+	return true
+
+## 作物被野猪啃掉（或其它方式损毁）
+func destroy_plant_at(tile_pos: Vector2i) -> bool:
+	var plant: BasePlant = plants.get(tile_pos)
+	if plant == null:
+		return false
+	plants.erase(tile_pos)
+	if is_instance_valid(plant):
+		plant.queue_free()
 	return true

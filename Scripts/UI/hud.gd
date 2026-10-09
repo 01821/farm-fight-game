@@ -8,7 +8,8 @@ extends CanvasLayer
 @onready var player: Player = $"../level/Player"
 
 func _process(_delta: float) -> void:
-	info_label.text = "Gold %d   Seeds %d   Crops %d   Water %d/%d" % [
-		player.money, player.seeds, player.harvested, player.water_left, Player.WATER_CAPACITY
+	info_label.text = "Gold %d   HP %d/%d   Seeds %d   Crops %d   Water %d/%d" % [
+		player.money, player.hp, Player.MAX_HP,
+		player.seeds, player.harvested, player.water_left, Player.WATER_CAPACITY
 	]
 	held_label.text = "[Q] switch   [F] use   holding: %s" % player.item_name()
