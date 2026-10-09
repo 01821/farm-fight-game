@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap_packed.png" id="2_tiles"]
 
 ; 心形是**预建的 Sprite2D 子节点**，脚本只改 region_rect，不在运行时创建节点。
-; 预建 6 颗（够 12 点血），用不到的自己 visible = false。
+; 技能栏同理：4 个技能各一个 Label，冷却时只改颜色和文字。
 [node name="MineHud" type="CanvasLayer"]
 script = ExtResource("1_hud")
 
@@ -46,13 +46,59 @@ texture = ExtResource("2_tiles")
 region_enabled = true
 region_rect = Rect2(72, 36, 18, 18)
 
-[node name="HintLabel" type="Label" parent="."]
-offset_left = 8.0
-offset_top = 26.0
-offset_right = 392.0
-offset_bottom = 44.0
-theme_override_colors/font_color = Color(1, 1, 1, 0.85)
+[node name="Skill1" type="Label" parent="."]
+offset_left = 6.0
+offset_top = 28.0
+offset_right = 106.0
+offset_bottom = 46.0
 theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
-text = "[A/D]走 [空格]跳 [F]砍"
+
+[node name="Skill2" type="Label" parent="."]
+offset_left = 104.0
+offset_top = 28.0
+offset_right = 204.0
+offset_bottom = 46.0
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+
+[node name="Skill3" type="Label" parent="."]
+offset_left = 202.0
+offset_top = 28.0
+offset_right = 302.0
+offset_bottom = 46.0
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+
+[node name="Skill4" type="Label" parent="."]
+offset_left = 300.0
+offset_top = 28.0
+offset_right = 396.0
+offset_bottom = 46.0
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+
+[node name="StatusLabel" type="Label" parent="."]
+offset_left = 6.0
+offset_top = 44.0
+offset_right = 396.0
+offset_bottom = 62.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.9)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+
+[node name="HintLabel" type="Label" parent="."]
+offset_left = 6.0
+offset_top = 282.0
+offset_right = 396.0
+offset_bottom = 298.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.8)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "[A/D]走 [空格]跳 [F]砍 [L]换武器"

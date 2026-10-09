@@ -183,8 +183,9 @@ func _update_flash(delta: float) -> void:
 	sprite.modulate = Color(3.0, 3.0, 3.0) if _flash > 0.0 else Color.WHITE
 
 ## amount = 伤害；from = 攻击者位置（决定往哪边飞，给 Vector2.INF 就不击退）
+## knock = 击退强度，不同武器/技能给的不一样（巨剑推得比短剑远）
 ## 返回这次是不是**打死了**
-func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
+func take_damage(amount: int, from: Vector2 = Vector2.INF, knock: float = KNOCKBACK_SPEED) -> bool:
 	if _dead or amount <= 0:
 		return false
 	hp = maxi(0, hp - amount)
@@ -195,7 +196,7 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
 		if away.length() > 0.01:
 			var dir: Vector2 = away.normalized()
 			# 主要往水平方向推，避免把怪顶到天上
-			_knockback = Vector2(dir.x, dir.y * 0.25).normalized() * KNOCKBACK_SPEED
+			_knockback = Vector2(dir.x, dir.y * 0.25).normalized() * knock
 	print("[矿洞] ", display_name(), " 挨了 ", amount, " 点，剩 ", hp, "/", max_hp)
 	if hp <= 0:
 		_dead = true

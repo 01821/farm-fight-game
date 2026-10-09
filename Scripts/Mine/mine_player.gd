@@ -2,29 +2,22 @@ class_name MinePlayer extends CharacterBody2D
 
 ## 矿洞里的横版角色控制器。
 ##
-## 移动手感上做了四件事，少哪一件都会"感觉不对"：
-##   1) **土狼时间**（coyote time）—— 刚走出平台边缘的一小段时间里仍然能跳
-##   2) **跳跃缓冲**（jump buffer）—— 落地前一点点按跳，落地瞬间自动起跳
-##   3) **可变跳跃高度** —— 松开跳跃键就上升速度砍半，轻点小跳、长按大跳
-##   4) 加减速分离 —— 起步有个加速过程，松手有个刹车过程，不是瞬间启停
+## 移动手感（阶段 A）—— 少哪一件都会"感觉不对"：
+##   土狼时间 / 跳跃缓冲 / 可变跳跃高度 / 加减速分离
+## 打击感（阶段 B）—— 少哪一个都会"打上去没感觉"：
+##   闪白 / 硬直 / 击退 / 飘字伤害数字
+## 战斗系统（阶段 D）：
+##   `L` 换武器（短剑 ↔ 巨剑，伤害/射程/速度都不同）
+##   `H U I O` 四个技能：重斩 / 旋风斩 / 冲刺 / 治疗（有冷却和能量）
 ##
-## 打击感上做了四件事（阶段 B）：
-##   闪白 / 受击硬直 / 击退 / **飘字伤害数字** —— 少一个都会"打上去没感觉"。
-##
-## 左右沿用农场的 `left` / `right`（A / D）动作名，跳跃用 `jump`（空格 / K），
-## 攻击用农场的 `use_item`（F / J）。复用同一套 InputMap 是为了避免
-## "进了矿洞 WASD 不动"这类经典 bug。
+## 键位刻意和农场的 `1~5 选作物` **错开** —— 两套动作在同一个 InputMap 里，
+## 共用键位会在矿洞里误触发"选作物"。
 
 signal attacked(hit_count: int)
 signal damaged(amount: int)
 signal died
-
-const MAX_HP: int = 6
-## 受伤后的无敌时间。没有它的话贴着怪会一秒掉光血，手感极差。
-const INVULN_TIME: float = 0.8
-## 被撞飞时的初速度
-const HURT_KNOCKBACK_X: float = 120.0
-const HURT_KNOCKBACK_Y: float = -150.0
+signal weapon_changed(id: int)
+signal skill_used(id: int)
 
 const SPEED: float = 112.0
 const ACCEL: float = 900.0
@@ -32,54 +25,97 @@ const FRICTION: float = 1300.0
 const GRAVITY: float = 760.0
 const MAX_FALL: float = 420.0
 const JUMP_VELOCITY: float = -238.0
-## 松手时上升速度乘以这个系数（越小跳得越矮）
 const JUMP_CUT: float = 0.42
 const COYOTE_TIME: float = 0.10
 const JUMP_BUFFER_TIME: float = 0.12
 
-const ATTACK_COOLDOWN: float = 0.34
 const ATTACK_TIME: float = 0.14
-const ATTACK_DAMAGE: int = 1
-## 判定框相对角色中心的水平偏移（朝右时；朝左时取负）
-const ATTACK_OFFSET: float = 13.0
+## 判定框竖直中心相对角色脚底的高度
+const BOX_CENTER_Y: float = -10.0
+
+const MAX_HP: int = 6
+## 受伤后的无敌时间。没有它的话贴着怪会一秒掉光血，手感极差。
+const INVULN_TIME: float = 0.8
+const HURT_KNOCKBACK_X: float = 120.0
+const HURT_KNOCKBACK_Y: float = -150.0
+
+## 冲刺撞到敌人时的伤害和击退
+const DASH_DAMAGE: int = 1
+const DASH_KNOCK: float = 90.0
 
 ## 飘字场景，在场景文件里预先接好，不在代码里 load
 @export var damage_number_scene: PackedScene
 
-## 1 = 朝右，-1 = 朝左
 var facing: int = 1
-
 var hp: int = MAX_HP
+var weapon_id: int = 0
+var energy: float = float(MineCombatData.ENERGY_MAX)
+## 每个技能的剩余冷却
+var skill_cd: Array[float] = [0.0, 0.0, 0.0, 0.0]
 
 var _coyote: float = 0.0
 var _jump_buffer: float = 0.0
 var _attack_cd: float = 0.0
 var _slash_time: float = 0.0
 var _invuln: float = 0.0
+var _dash_time: float = 0.0
+var _dash_speed: float = 0.0
+var _dash_hit: Dictionary = {}
+var _reach: float = 24.0
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var slash: Polygon2D = $Slash
 ## 判定框是**预建的 Area2D**，一直开着当查询区域用 ——
-## 这样 get_overlapping_bodies() 拿到的就是当前这一帧的重叠结果，
-## 不用等一帧、也不用在运行时创建任何节点。
+## 这样 get_overlapping_bodies() 拿到的就是当前这一帧的重叠结果。
 @onready var attack_box: Area2D = $AttackBox
+@onready var _attack_shape_node: CollisionShape2D = $AttackBox/CollisionShape2D
+
+## 技能的判定范围是**每次都不一样**的（重斩是长条、旋风斩是方块），
+## 而 Area2D 的重叠结果要等一个物理帧才刷新，技能判定不能等。
+## 所以技能用**形状查询**即时结算。
+## 注意：这里创建的是 RectangleShape2D / PhysicsShapeQueryParameters2D，
+## 都是 Resource 不是 Node —— 项目约定禁止的是动态创建节点。
+var _skill_shape: RectangleShape2D
+var _skill_query: PhysicsShapeQueryParameters2D
 
 func _ready() -> void:
 	add_to_group("mine_player")
+	# 让判定框的形状成为本实例独有的：换武器要改它的尺寸，
+	# 而 .tscn 里的 sub_resource 默认是多个实例共享的。
+	if _attack_shape_node.shape != null:
+		_attack_shape_node.shape = _attack_shape_node.shape.duplicate()
+	_skill_shape = RectangleShape2D.new()
+	_skill_shape.size = Vector2(24, 24)
+	_skill_query = PhysicsShapeQueryParameters2D.new()
+	_skill_query.shape = _skill_shape
+	_skill_query.collision_mask = 4     # 只找敌人层
+	_skill_query.collide_with_areas = false
+	_apply_weapon()
 
 func _physics_process(delta: float) -> void:
-	_attack_cd = maxf(0.0, _attack_cd - delta)
-	_update_invuln(delta)
-	_update_slash(delta)
+	_tick_timers(delta)
 
 	var dir: float = Input.get_axis("left", "right")
-	# 先定朝向，判定框才知道该摆在哪边
-	if absf(dir) > 0.01:
+	if absf(dir) > 0.01 and _dash_time <= 0.0:
 		facing = 1 if dir > 0.0 else -1
-	attack_box.position.x = ATTACK_OFFSET * float(facing)
+	attack_box.position = Vector2(_reach * 0.5 * float(facing), BOX_CENTER_Y)
 
+	# --- 冲刺中：接管一切移动 ---
+	if _dash_time > 0.0:
+		_dash_time = maxf(0.0, _dash_time - delta)
+		velocity = Vector2(float(facing) * _dash_speed, 0.0)
+		_dash_damage_touch()
+		move_and_slide()
+		return
+
+	# --- 输入 ---
+	if Input.is_action_just_pressed("switch_weapon"):
+		switch_weapon()
 	if Input.is_action_just_pressed("use_item"):
 		attack()
+	for i in range(MineCombatData.skill_count()):
+		if Input.is_action_just_pressed("skill_%d" % (i + 1)):
+			cast_skill(i)
 
 	# --- 水平：加速 / 刹车分离 ---
 	if absf(dir) > 0.01:
@@ -108,7 +144,6 @@ func _physics_process(delta: float) -> void:
 		_jump_buffer = 0.0
 		_coyote = 0.0
 
-	# --- 可变跳跃高度 ---
 	if Input.is_action_just_released("jump") and velocity.y < 0.0:
 		velocity.y *= JUMP_CUT
 
@@ -117,27 +152,56 @@ func _physics_process(delta: float) -> void:
 	if absf(velocity.x) > 1.0:
 		sprite.flip_h = velocity.x < 0.0
 
-# --- 攻击 ---
+func _tick_timers(delta: float) -> void:
+	_attack_cd = maxf(0.0, _attack_cd - delta)
+	_update_invuln(delta)
+	_update_slash(delta)
+	energy = minf(energy + MineCombatData.ENERGY_REGEN * delta, float(MineCombatData.ENERGY_MAX))
+	for i in range(skill_cd.size()):
+		skill_cd[i] = maxf(0.0, skill_cd[i] - delta)
+
+# --- 武器 ---
+
+func switch_weapon() -> int:
+	weapon_id = (weapon_id + 1) % MineCombatData.weapon_count()
+	_apply_weapon()
+	print("[矿洞] 换成 ", MineCombatData.weapon_name(weapon_id))
+	weapon_changed.emit(weapon_id)
+	return weapon_id
+
+func _apply_weapon() -> void:
+	var w := MineCombatData.get_weapon(weapon_id)
+	_reach = float(w["reach"])
+	if _attack_shape_node != null and _attack_shape_node.shape is RectangleShape2D:
+		(_attack_shape_node.shape as RectangleShape2D).size = Vector2(_reach, float(w["box_height"]))
+	slash.color = w["color"]
+
+func weapon_name() -> String:
+	return MineCombatData.weapon_name(weapon_id)
+
+# --- 普攻 ---
 
 ## 挥砍。返回这一刀打中了几只；**冷却没到就返回 0**。
 ## 冷却检查放在这里而不是调用方 —— 这样无论谁调（键盘、AI、测试）都绕不过去。
 func attack() -> int:
 	if _attack_cd > 0.0:
 		return 0
-	_attack_cd = ATTACK_COOLDOWN
+	var w := MineCombatData.get_weapon(weapon_id)
+	_attack_cd = float(w["cooldown"])
 	_slash_time = ATTACK_TIME
 	slash.visible = true
-	var dir: float = float(facing)
-	slash.scale = Vector2(dir * 0.55, 0.55)
+	slash.scale = Vector2(float(facing) * 0.55, 0.55)
 	slash.modulate = Color(1, 1, 1, 0.95)
 
+	var dmg: int = int(w["damage"])
+	var knock: float = float(w["knock"])
 	var hit: int = 0
 	for body in attack_box.get_overlapping_bodies():
 		var enemy := body as MineEnemy
 		if enemy == null or not is_instance_valid(enemy) or enemy.is_dead():
 			continue
-		enemy.take_damage(ATTACK_DAMAGE, global_position)
-		spawn_damage_number(ATTACK_DAMAGE, enemy.global_position + Vector2(0, -24))
+		enemy.take_damage(dmg, global_position, knock)
+		spawn_damage_number(dmg, enemy.global_position + Vector2(0, -24))
 		hit += 1
 
 	if hit > 0:
@@ -146,6 +210,110 @@ func attack() -> int:
 		print("[矿洞] 挥空了")
 	attacked.emit(hit)
 	return hit
+
+func can_attack() -> bool:
+	return _attack_cd <= 0.0
+
+# --- 技能 ---
+
+func skill_ready(id: int) -> bool:
+	if not MineCombatData.is_valid_skill(id):
+		return false
+	return skill_cd[id] <= 0.0 and energy >= float(MineCombatData.skill_field(id, "cost", 0))
+
+## 放技能。返回有没有放出去（冷却中 / 能量不够都会返回 false）。
+func cast_skill(id: int) -> bool:
+	if not skill_ready(id):
+		return false
+	var s := MineCombatData.get_skill(id)
+	energy -= float(s["cost"])
+	skill_cd[id] = float(s["cooldown"])
+	match String(s["kind"]):
+		"heavy":
+			_skill_heavy(s)
+		"spin":
+			_skill_spin(s)
+		"dash":
+			_skill_dash(s)
+		"heal":
+			_skill_heal(s)
+	print("[矿洞] 放技能 ", MineCombatData.skill_name(id), "（剩能量 ", int(energy), "）")
+	skill_used.emit(id)
+	return true
+
+func _skill_heavy(s: Dictionary) -> void:
+	var size := Vector2(float(s["reach"]), float(s["box_height"]))
+	var center := Vector2(float(facing) * float(s["reach"]) * 0.5, BOX_CENTER_Y)
+	var dmg: int = int(s["damage"])
+	var n: int = 0
+	for e in query_rect(size, center):
+		e.take_damage(dmg, global_position, 240.0)
+		spawn_damage_number(dmg, e.global_position + Vector2(0, -24))
+		n += 1
+	_flash_slash(size, center, Color(1.0, 0.55, 0.25))
+	print("[矿洞] 重斩命中 ", n, " 只")
+
+func _skill_spin(s: Dictionary) -> void:
+	var r: float = float(s["radius"])
+	var size := Vector2(r * 2.0, r * 2.0)
+	var dmg: int = int(s["damage"])
+	var n: int = 0
+	for e in query_rect(size, Vector2(0, BOX_CENTER_Y)):
+		e.take_damage(dmg, global_position, 200.0)
+		spawn_damage_number(dmg, e.global_position + Vector2(0, -24))
+		n += 1
+	_flash_slash(size, Vector2(0, BOX_CENTER_Y), Color(0.7, 0.9, 1.0))
+	print("[矿洞] 旋风斩命中 ", n, " 只")
+
+func _skill_dash(s: Dictionary) -> void:
+	_dash_time = float(s["duration"])
+	_dash_speed = float(s["speed"])
+	_dash_hit.clear()
+	# 突进期间无敌（用无敌帧实现，顺便让角色闪起来）
+	_invuln = maxf(_invuln, _dash_time + 0.06)
+	velocity = Vector2(float(facing) * _dash_speed, 0.0)
+	print("[矿洞] 冲刺")
+
+## 冲刺途中撞到谁就伤谁，但同一个目标一次冲刺只吃一下
+func _dash_damage_touch() -> void:
+	for e in query_rect(Vector2(22, 24), Vector2(0, BOX_CENTER_Y)):
+		var key: int = e.get_instance_id()
+		if _dash_hit.has(key):
+			continue
+		_dash_hit[key] = true
+		e.take_damage(DASH_DAMAGE, global_position, DASH_KNOCK)
+		spawn_damage_number(DASH_DAMAGE, e.global_position + Vector2(0, -24))
+
+func _skill_heal(s: Dictionary) -> void:
+	var amount: int = int(s["heal"])
+	var before: int = hp
+	hp = mini(hp + amount, MAX_HP)
+	print("[矿洞] 治疗 ", hp - before, " 点（", before, " -> ", hp, "）")
+
+# --- 判定辅助 ---
+
+## 在角色周围做一次矩形范围查询，立刻拿到结果（不等物理帧）
+func query_rect(size: Vector2, offset: Vector2) -> Array[MineEnemy]:
+	var out: Array[MineEnemy] = []
+	if _skill_query == null:
+		return out
+	_skill_shape.size = size
+	_skill_query.transform = Transform2D(0.0, global_position + offset)
+	for r in get_world_2d().direct_space_state.intersect_shape(_skill_query, 16):
+		var e := r.get("collider") as MineEnemy
+		if e != null and is_instance_valid(e) and not e.is_dead():
+			out.append(e)
+	return out
+
+## 技能命中时用 Slash 节点闪一下，形状和后坐力跟着技能走
+func _flash_slash(size: Vector2, offset: Vector2, color: Color) -> void:
+	slash.visible = true
+	slash.color = color
+	slash.position = offset + Vector2(0, -2)
+	slash.scale = size / 24.0
+	slash.rotation = 0.0
+	slash.modulate = Color(1, 1, 1, 0.85)
+	_slash_time = 0.2
 
 ## 在指定位置飘一个伤害数字。会实例化**预建的**飘字场景，不 new 节点。
 func spawn_damage_number(amount: int, at: Vector2) -> void:
@@ -158,9 +326,6 @@ func spawn_damage_number(amount: int, at: Vector2) -> void:
 	n.global_position = at
 	n.setup(str(amount))
 
-func can_attack() -> bool:
-	return _attack_cd <= 0.0
-
 # --- 受伤 ---
 
 ## 返回这次有没有真的吃到伤害（无敌帧内会返回 false）
@@ -170,7 +335,6 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
 	hp = maxi(0, hp - amount)
 	_invuln = INVULN_TIME
 	Sfx.play("hurt")
-	# 被撞飞一下，给玩家一个"被打到了"的即时反馈，也顺便拉开距离
 	if from.is_finite():
 		var dx: float = signf(global_position.x - from.x)
 		if absf(dx) < 0.01:
@@ -185,6 +349,9 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
 
 func is_invulnerable() -> bool:
 	return _invuln > 0.0
+
+func is_dashing() -> bool:
+	return _dash_time > 0.0
 
 ## 无敌期间让角色一闪一闪，玩家一眼就知道"现在是安全的"
 func _update_invuln(delta: float) -> void:
@@ -205,11 +372,13 @@ func _update_slash(delta: float) -> void:
 		slash.visible = false
 		return
 	var t: float = 1.0 - _slash_time / ATTACK_TIME
+	if t < 0.0:
+		t = 0.0
 	var dir: float = float(facing)
-	var grow: float = lerpf(0.55, 1.35, t)
+	var grow: float = lerpf(0.55, 1.35, minf(t, 1.0))
 	slash.scale = Vector2(dir * grow, grow)
-	slash.rotation = lerpf(-0.6, 0.5, t) * dir
-	slash.modulate = Color(1, 1, 1, lerpf(0.95, 0.0, t))
+	slash.rotation = lerpf(-0.6, 0.5, minf(t, 1.0)) * dir
+	slash.modulate = Color(1, 1, 1, lerpf(0.95, 0.0, minf(t, 1.0)))
 
 func is_moving() -> bool:
 	return absf(velocity.x) > 1.0
