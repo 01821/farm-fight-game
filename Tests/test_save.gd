@@ -77,8 +77,10 @@ func _ready() -> void:
 	_cycle.elapsed = 30.0            # > 27 秒，属于夜晚
 	_player.money = 137
 	_player.hp = 3
-	_player.seeds = 5
-	_player.harvested = 2
+	_player.seeds[0] = 5
+	_player.seeds[3] = 2
+	_player.harvested[0] = 2
+	_player.select_seed_type(3)
 	_player.water_left = 4
 	_player.active_item = Player.Item.SWORD
 	_controller.goal_reached = true
@@ -96,8 +98,10 @@ func _ready() -> void:
 	print("--- 破坏状态后读档 ---")
 	_player.money = 0
 	_player.hp = Player.MAX_HP
-	_player.seeds = 0
-	_player.harvested = 0
+	_player.seeds[0] = 0
+	_player.seeds[3] = 0
+	_player.harvested[0] = 0
+	_player.select_seed_type(0)
 	_player.water_left = 0
 	_player.active_item = Player.Item.SEED
 	_controller.goal_reached = false
@@ -114,8 +118,10 @@ func _ready() -> void:
 	_check("时段由 elapsed 重算为夜晚", _cycle.is_night == true)
 	_check("金币恢复 = 137", _player.money == 137)
 	_check("血量恢复 = 3", _player.hp == 3)
-	_check("种子恢复 = 5", _player.seeds == 5)
-	_check("篮子恢复 = 2", _player.harvested == 2)
+	_check("胡萝卜种子恢复 = 5", _player.seed_count(0) == 5)
+	_check("番茄种子恢复 = 2", _player.seed_count(3) == 2)
+	_check("选中的作物种类恢复 = 番茄", _player.seed_type == 3 and _player.crop_name() == "番茄")
+	_check("篮子恢复 = 2", _player.basket_total() == 2 and _player.harvested[0] == 2)
 	_check("水量恢复 = 4", _player.water_left == 4)
 	_check("手持物恢复 = 长剑", _player.active_item == Player.Item.SWORD)
 	_check("目标进度恢复", _controller.goal_reached == true)

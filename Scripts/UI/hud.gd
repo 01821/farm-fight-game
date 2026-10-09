@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-## 左上角状态栏，三行。
+## 左上角状态栏，四行。
 ##
 ## 字体由项目设置 gui/theme/custom_font 指定：
 ##   Fusion Pixel Font 12px 简体（OFL，见 Assets/fonts/OFL-fusion-pixel-font.txt）
@@ -11,6 +11,7 @@ extends CanvasLayer
 @onready var info_label: Label = $InfoLabel
 @onready var farm_label: Label = $FarmLabel
 @onready var held_label: Label = $HeldLabel
+@onready var key_label: Label = $KeyLabel
 @onready var player: Player = $"../level/Player"
 @onready var cycle: DayCycle = $"../DayCycle"
 @onready var controller: FarmController = $"../FarmController"
@@ -24,8 +25,10 @@ func _process(_delta: float) -> void:
 			cycle.day, phase,
 			mini(player.money, FarmController.GOLD_GOAL), FarmController.GOLD_GOAL
 		]
-	farm_label.text = "金币 %d   血量 %d/%d   种子 %d   作物 %d   水量 %d/%d" % [
-		player.money, player.hp, Player.MAX_HP,
-		player.seeds, player.harvested, player.water_left, Player.WATER_CAPACITY
+	farm_label.text = "金币 %d   血量 %d/%d   水量 %d/%d" % [
+		player.money, player.hp, Player.MAX_HP, player.water_left, Player.WATER_CAPACITY
 	]
-	held_label.text = "手持: %s   [Q]切换 [F]使用 [F5]存 [F9]读" % player.item_name()
+	held_label.text = "手持: %s   种子 %d   作物 %d" % [
+		player.item_name(), player.seed_count(), player.basket_total()
+	]
+	key_label.text = "[1-5]选作物 [Q]切换 [F]使用 [F5]存 [F9]读"

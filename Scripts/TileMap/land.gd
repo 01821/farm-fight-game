@@ -11,7 +11,6 @@ const BASE_PLANT = preload("uid://orgflfd17epj")
 
 ## 格子坐标 -> 作物实例
 var plants: Dictionary = {}
-var current_crop_type: int = 0
 
 func _ready() -> void:
 	add_to_group("farm_land")
@@ -32,12 +31,13 @@ func try_plant_at(tile_pos: Vector2i) -> bool:
 	if plants.has(tile_pos):
 		print("[农场] 这格已经种过了")
 		return false
-	if player.seeds <= 0:
-		print("[农场] 没有种子了，去商店买")
+	if not player.has_seed():
+		print("[农场] 没有 ", player.crop_name(), " 种子了，去商店买")
 		return false
-	player.seeds -= 1
-	spawn_plant(tile_pos, current_crop_type)
-	print("[农场] 播种成功，剩余种子 ", player.seeds)
+	var type_id: int = player.seed_type
+	player.take_seed()
+	spawn_plant(tile_pos, type_id)
+	print("[农场] 种下 ", CropData.name_of(type_id), "，还剩 ", player.seed_count(type_id), " 粒")
 	return true
 
 ## 在指定格子实例化一株作物。播种和读档共用这一条路径。
@@ -45,6 +45,8 @@ func try_plant_at(tile_pos: Vector2i) -> bool:
 func spawn_plant(tile_pos: Vector2i, type_id: int, extra: Dictionary = {}) -> BasePlant:
 	var plant: BasePlant = BASE_PLANT.instantiate()
 	plant.plantType = type_id
+	# growTime 必须在 add_child 之前设：_ready 会拿它去设 Timer
+	plant.growTime = CropData.grow_time(type_id)
 	plants_node.add_child(plant)
 	plant.global_position = to_global(map_to_local(tile_pos))
 	if not extra.is_empty():
@@ -77,10 +79,11 @@ func try_harvest_at(tile_pos: Vector2i) -> bool:
 	if not plant.is_mature():
 		print("[农场] 还没成熟")
 		return false
+	var type_id: int = plant.plantType
 	plants.erase(tile_pos)
 	plant.queue_free()
-	player.harvested += 1
-	print("[农场] 收获成功！篮子里有 ", player.harvested, " 个作物")
+	player.add_harvest(type_id)
+	print("[农场] 收获 ", CropData.name_of(type_id), "！篮子里共 ", player.basket_total(), " 个")
 	return true
 
 ## 作物被野猪啃掉（或其它方式损毁）
@@ -112,11 +115,10 @@ func to_save_data() -> Dictionary:
 		d["tile_x"] = tile.x
 		d["tile_y"] = tile.y
 		list.append(d)
-	return {"crop_type": current_crop_type, "plants": list}
+	return {"plants": list}
 
 func apply_save_data(data: Dictionary) -> void:
 	clear_all_plants()
-	current_crop_type = int(data.get("crop_type", 0))
 	for entry in data.get("plants", []):
 		if typeof(entry) != TYPE_DICTIONARY:
 			continue

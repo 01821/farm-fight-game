@@ -41,6 +41,7 @@ Scripts/
   State/{State,state_machine}.gd          状态机基础设施
   State/{Player,animal}/{idle,move}.gd    具体状态
   plants/base_plant.gd                    作物：浇水驱动生长
+  plants/crop_data.gd                     class_name CropData：作物数据表（价格 / 生长 / 图集列）
   TileMap/land.gd                         class_name FarmLand：播种/浇水/收获规则
   buildings/water_source.gd               水源：靠近自动补水
   buildings/market.gd                     class_name Market：商店买卖
@@ -66,6 +67,7 @@ Tests/                                    一次性自测场景（开发用，�
 | `quick_save` | **F5** | 手动存档 |
 | `quick_load` | **F9** | 读档 |
 | `delete_save` | **F10** | 删除存档（下次启动就是新游戏） |
+| `seed_1` … `seed_5` | **1** … **5** | 选择作物种类（播种和买种子都用它） |
 
 **2D 物理层命名**
 
@@ -154,16 +156,31 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 
 ### 农场循环规则
 
-1. **播种**要求 terrain 0 的耕地、该格没种过、`player.seeds > 0`。
-2. **种下后不会自己生长**。
-3. **浇水**后该格出现蓝色湿痕（`WetMark`）。
-4. `growTime`（默认 3 秒）后升 **一级** 并**自动变干**——下一级要再浇一次。
-5. `growStage` 到 4 即成熟，不能再浇。
-6. **收获**后作物销毁，格子空出可重种。
+1. **播种**要求：terrain 0 的耕地、该格没种过、手上有**当前选中种类**的种子。
+2. 种下的**种类**由 `player.seed_type` 决定（按 **1-5** 切换）。
+3. **种下后不会自己生长**。
+4. **浇水**后该格出现蓝色湿痕（`WetMark`）。
+5. `CropData.grow_time(种类)` 秒后升 **一级** 并**自动变干**——下一级要再浇一次。
+6. `growStage` 到 `CropData.MAX_STAGE`（4）即成熟，不能再浇。
+7. **收获**后按种类计入篮子，格子空出可重种。
+
+### 作物表（`Scripts/plants/crop_data.gd`）
+
+种类 id **就是图集行号**。
+
+| id | 名称 | 图集行 | 种子价 | 收购价 | 每级秒数 | 满级总时长 | 单株利润 | 利润/秒 |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 胡萝卜 | 0 | 3 | 6 | 2.0 | 8.0s | 3 | 0.38 |
+| 1 | 紫甘蓝 | 1 | 5 | 11 | 2.8 | 11.2s | 6 | 0.54 |
+| 2 | 玉米 | 2 | 8 | 19 | 3.6 | 14.4s | 11 | 0.76 |
+| 3 | 番茄 | 3 | 12 | 30 | 4.6 | 18.4s | 18 | 0.98 |
+| 4 | 卷心菜 | 4 | 18 | 48 | 5.6 | 22.4s | 30 | 1.34 |
+
+越贵的作物**单位时间收益越高**，但前期投入大、占田时间长（夜里更容易被野猪啃）。这就是种植选择的意义。
 
 ### 经济与目标
 
-初始金币 20 / 种子 8；种子 3 金，作物 5 金。一个作物净赚 2 金。
+初始金币 20、8 粒胡萝卜种子。种子和收获物都是**按种类分开计数**的数组（`player.seeds` / `player.harvested`，下标就是种类 id）。
 
 **目标**：金币达到 `FarmController.GOLD_GOAL = 300` 即判定「建成谷仓」（`goal_reached` 置位，HUD 显示"目标已达成！"）。
 
@@ -242,7 +259,7 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 |---|---|
 | 玩家 | `Rect2(16, 144, 16, 16)` |
 | 温顺动物 | `Rect2(0, 160, 16, 16)` |
-| 作物（按 growStage / plantType） | `Rect2(64 + 16*stage, 16*type, 16, 16)`，stage 0→4 即 x 从 64 到 128 |
+| 作物（按阶段 / 种类） | `Rect2(16 * CropData.column_for_stage(stage), 16 * type, 16, 16)` —— 列 4→8，行 0→4 |
 | tree_1 | `Rect2(48, 0, 16, 32)` |
 | 水桶 / 激活 | `Rect2(0, 96, 16, 16)` / `Rect2(16, 96, 16, 16)` |
 | 水缸 / 激活 | `Rect2(32, 128, 32, 16)` / `Rect2(32, 144, 32, 16)` |
@@ -257,6 +274,21 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 野猪用 **`Rect2(48, 160, 16, 16)`**。
 
 全部素材为 **CC0（Kenney）**，各目录下有 `License.txt`。
+
+**农场图集的行 = 作物种类**（已 8 倍放大逐格确认）：行 0 胡萝卜、行 1 紫甘蓝、行 2 玉米、行 3 番茄、行 4 卷心菜。每行的列 4..8 是同一种作物的生长序列。
+
+### ⚠️ 待确认：生长阶段的第 3 帧可能是「收获后的空地」
+
+`CropData.STAGE_COLUMNS = [4, 5, 6, 7, 8]`。放大看：
+- 列 4 / 5 / 6 明确是「幼苗 → 生长 → 成株」
+- 列 8 看起来是**收获物图标**（画得比一格还大）
+- 列 7 在胡萝卜 / 番茄 / 卷心菜行看起来像**一堆土**，在玉米行看起来像**枯黄但带玉米的植株**
+
+两种解读都说得通，静止图无法判定。如果真相是「列 7 = 空地、列 8 = 收获物」，
+那么现在 `growStage=3` 会**显示成作物消失**。改法是一行：把 `STAGE_COLUMNS` 改成
+`[4, 5, 6, 8]`，同时 `MAX_STAGE` 改成 `3`。
+
+**跑一局盯住作物长大的过程**：若第 3 帧变成一坨土、第 4 帧突然冒出一颗大蔬菜，就按上面改。
 
 ---
 
@@ -312,6 +344,7 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **昼夜循环**：45 秒一天，夜晚画面变暗，难度随天数爬坡
 - **目标**：攒够 300 金建成谷仓
 - **存档**：天亮自动存、启动自动读，F5/F9/F10 手动控制
+- **多种作物**：5 种，按 1-5 切换；越贵单位时间收益越高
 - 水壶容量与水源自动补水
 - HUD：**中文界面**，显示 金币 / 血量 / 种子 / 作物 / 水量 / 手持物
 
@@ -347,7 +380,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 1) 作物单元自测（11 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_plant.tscn --quit-after 3000 2>&1 | Out-String
 
-# 2) 农场 + 经济端到端（45 项）
+# 2) 农场 + 经济 + 多种作物端到端（66 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_farm.tscn --quit-after 3000 2>&1 | Out-String
 
 # 3) 战斗端到端（30 项）
@@ -356,14 +389,14 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 4) 昼夜 + 夜晚来袭 + 目标（26 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_daynight.tscn --quit-after 4000 2>&1 | Out-String
 
-# 5) 存档（34 项）
+# 5) 存档（36 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_save.tscn --quit-after 4000 2>&1 | Out-String
 
 # 6) 跑主场景 100 秒（约 2.2 个昼夜），抓运行时错误
 & $godot --headless --path . --fixed-fps 60 --quit-after 6000 2>&1 | Out-String
 ```
 
-合计 149 项断言。
+合计 169 项断言。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -391,5 +424,6 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 4 | 战斗：野猪啃作物 + 剑 + 血量 + 刷新器 | ✅ |
 | 5 | 中文 UI（Fusion Pixel Font 12px，OFL） | ✅ |
 | 6 | 昼夜循环 + 夜晚成群来袭 + 目标 | ✅ |
-| 7 | **存档系统**（天亮自动存 / 启动自动读 / F5 F9 F10） | ✅ |
-| 8 | 打磨：多种作物、音效、攻击动画 | ⬜ 下一步 |
+| 7 | 存档系统（天亮自动存 / 启动自动读 / F5 F9 F10） | ✅ |
+| 8 | 多种作物（5 种，1-5 切换，价格与生长时间各不相同） | ✅ |
+| 9 | 打磨：音效、攻击动画、击退、胜利反馈 | ⬜ 下一步 |

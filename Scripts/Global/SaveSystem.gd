@@ -6,7 +6,7 @@ class_name SaveSystem extends Node
 ## 可以在 add_child 之后、第一帧之前把 save_path 换成临时文件，既能测到真实读档路径，
 ## 又不会污染玩家真正的存档。
 
-const SAVE_VERSION: int = 1
+const SAVE_VERSION: int = 2
 const DEFAULT_PATH: String = "user://farm_save.json"
 
 @export var save_path: String = DEFAULT_PATH

@@ -15,7 +15,7 @@ signal watered
 @export var growTime: float = 3.0
 
 var growStage: int = 0
-var endStage: int = 4
+var endStage: int = CropData.MAX_STAGE
 var is_watered: bool = false
 
 func _ready() -> void:
@@ -52,7 +52,7 @@ func _on_timer_timeout() -> void:
 		matured.emit()
 
 func updateSprite() -> void:
-	sprite_2d.region_rect = Rect2(64 + 16 * growStage, 16 * plantType, 16, 16)
+	sprite_2d.region_rect = Rect2(16 * CropData.column_for_stage(growStage), 16 * plantType, 16, 16)
 
 func _updateWetMark() -> void:
 	wet_mark.visible = is_watered

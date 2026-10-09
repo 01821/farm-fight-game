@@ -26,8 +26,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("cycle_item"):
 		player.cycle_item()
 		print("[手上] 换成 ", player.item_name())
-	elif event.is_action_pressed("use_item"):
+		return
+	if event.is_action_pressed("use_item"):
 		use_held_item()
+		return
+	# 1-5 选择作物种类（播种和买种子都用它）
+	for i in range(CropData.count()):
+		if event.is_action_pressed("seed_%d" % (i + 1)):
+			if player.select_seed_type(i):
+				print("[种子] 选中 ", player.crop_name(), "（有 ", player.seed_count(i), " 粒，种子价 ",
+					CropData.seed_price(i), "，收购价 ", CropData.sell_price(i), "）")
+			else:
+				print("[种子] 已经是 ", player.crop_name(), " 了")
+			return
 
 func use_held_item() -> bool:
 	# 站在商店里，交易优先

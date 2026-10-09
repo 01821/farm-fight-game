@@ -1,11 +1,10 @@
 class_name Market extends Node2D
 
 ## 商店（挂在 house.tscn 上）：站进 InteractionArea 后，用手持道具按 F 交易。
-##   手持种子袋 -> 买 1 粒种子（花钱）
-##   手持收获篮 -> 卖掉篮子里全部作物（赚钱）
-
-const SEED_PRICE: int = 3
-const CROP_PRICE: int = 5
+##   手持种子袋 -> 买 1 粒**当前选中种类**的种子（价格见 CropData）
+##   手持收获篮 -> 卖掉篮子里**所有种类**的作物
+##
+## 站在商店里按 1-5 可以切换要买卖的作物种类（分发在 FarmController 里）。
 
 @onready var area: Area2D = $InteractionArea
 
@@ -19,23 +18,36 @@ func is_player_inside() -> bool:
 	return _player_inside > 0
 
 func buy_seed(player: Player) -> bool:
-	if player.money < SEED_PRICE:
-		print("[商店] 金币不够（需要 ", SEED_PRICE, "，只有 ", player.money, "）")
+	var type_id: int = player.seed_type
+	var price: int = CropData.seed_price(type_id)
+	if player.money < price:
+		print("[商店] 金币不够（", CropData.name_of(type_id), " 种子要 ", price, "，只有 ", player.money, "）")
 		return false
-	player.money -= SEED_PRICE
-	player.seeds += 1
-	print("[商店] 买下 1 粒种子，-", SEED_PRICE, " 金，剩 ", player.money)
+	player.money -= price
+	player.add_seed(type_id, 1)
+	print("[商店] 买下 1 粒 ", CropData.name_of(type_id), " 种子，-", price,
+		" 金，剩 ", player.money, "，该种子共 ", player.seed_count(type_id), " 粒")
 	return true
 
 func sell_crops(player: Player) -> bool:
-	if player.harvested <= 0:
-		print("[商店] 篮子是空的，先收获作物")
+	var total: int = 0
+	var count: int = 0
+	var detail: String = ""
+	for type_id in range(player.harvested.size()):
+		var n: int = player.harvested[type_id]
+		if n <= 0:
+			continue
+		total += n * CropData.sell_price(type_id)
+		count += n
+		if detail != "":
+			detail += "、"
+		detail += "%s x%d" % [CropData.name_of(type_id), n]
+		player.harvested[type_id] = 0
+	if count <= 0:
+		print("[商店] 篮子是空的，先去收获作物")
 		return false
-	var count: int = player.harvested
-	var income: int = count * CROP_PRICE
-	player.harvested = 0
-	player.money += income
-	print("[商店] 卖出 ", count, " 个作物，+", income, " 金，共 ", player.money)
+	player.money += total
+	print("[商店] 卖出 ", detail, "，+", total, " 金，共 ", player.money)
 	return true
 
 func _on_body_entered(body: Node2D) -> void:
