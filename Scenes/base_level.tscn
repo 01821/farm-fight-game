@@ -14,7 +14,7 @@
 [ext_resource type="Script" path="res://Scripts/UI/hud.gd" id="10_hud"]
 [ext_resource type="Script" path="res://Scripts/Interaction/farm_controller.gd" id="11_fctl"]
 [ext_resource type="Script" path="res://Scripts/Global/PestSpawner.gd" id="12_pest"]
-[ext_resource type="PackedScene" path="res://Scenes/animals/boar.tscn" id="13_boar"]
+[ext_resource type="PackedScene" path="res://Scenes/animals/pest.tscn" id="13_boar"]
 [ext_resource type="Script" path="res://Scripts/Global/DayCycle.gd" id="14_day"]
 [ext_resource type="Script" path="res://Scripts/Global/SaveSystem.gd" id="15_save"]
 
@@ -1012,5 +1012,5 @@ script = ExtResource("15_save")
 [node name="PestSpawner" type="Node2D" parent="."]
 position = Vector2(240, 192)
 script = ExtResource("12_pest")
-boar_scene = ExtResource("13_boar")
+pest_scene = ExtResource("13_boar")
 

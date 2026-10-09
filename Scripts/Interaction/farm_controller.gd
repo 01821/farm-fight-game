@@ -74,16 +74,16 @@ func attack() -> bool:
 	player.begin_attack_cooldown()
 	var hit: int = 0
 	for node in get_tree().get_nodes_in_group("pest"):
-		var boar := node as Boar
-		if boar == null or not is_instance_valid(boar):
+		var pest := node as Pest
+		if pest == null or not is_instance_valid(pest):
 			continue
-		if player.global_position.distance_to(boar.global_position) <= ATTACK_RANGE:
-			boar.take_damage(ATTACK_DAMAGE, player.global_position)
+		if player.global_position.distance_to(pest.global_position) <= ATTACK_RANGE:
+			pest.take_damage(ATTACK_DAMAGE, player.global_position)
 			hit += 1
 	if hit == 0:
-		print("[战斗] 挥空了，附近没有野猪")
+		print("[战斗] 挥空了，附近没有害兽")
 		return false
-	print("[战斗] 砍中 ", hit, " 只野猪")
+	print("[战斗] 砍中 ", hit, " 只害兽")
 	Sfx.play("hit")
 	return true
 

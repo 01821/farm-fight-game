@@ -23,6 +23,13 @@ func _check(label: String, ok: bool) -> void:
 func _count_pests() -> int:
 	return get_tree().get_nodes_in_group("pest").size()
 
+func _move_to(pos: Vector2) -> void:
+	_player.global_position = pos
+	_player.velocity = Vector2.ZERO
+
+func _move_to_tile(tile: Vector2i) -> void:
+	_move_to(_land.to_global(_land.map_to_local(tile)))
+
 func _ready() -> void:
 	var ps := load("res://Scenes/base_level.tscn") as PackedScene
 	_level = ps.instantiate()
@@ -49,10 +56,10 @@ func _ready() -> void:
 		Level.animalRegion = region
 
 	print("--- 刷新器 ---")
-	_check("刷新器拿到了 boar_scene", _spawner.boar_scene != null)
+	_check("刷新器拿到了 pest_scene", _spawner.pest_scene != null)
 	_check("白天刷新器不活跃", _spawner.is_active() == false)
-	_check("场上初始没有野猪", _count_pests() == 0)
-	var boar: Boar = _spawner.spawn_one()
+	_check("场上初始没有害兽", _count_pests() == 0)
+	var boar: Pest = _spawner.spawn_one()
 	_check("spawn_one 返回实例", boar != null)
 	_check("场上 1 只野猪", _count_pests() == 1)
 	if boar == null:
@@ -122,7 +129,7 @@ func _ready() -> void:
 	_check("附近没野猪时砍空返回 false", _ctl.use_held_item() == false)
 
 	print("--- 野猪啃作物 ---")
-	var boar2: Boar = _spawner.spawn_one()
+	var boar2: Pest = _spawner.spawn_one()
 	_check("又来一只", _count_pests() == 1)
 	# 重新种一株（上一株还在）
 	if not _land.plants.has(tile):
@@ -140,7 +147,7 @@ func _ready() -> void:
 
 	print("--- 野猪顶玩家 ---")
 	_player.hp = Player.MAX_HP
-	var boar3: Boar = _spawner.spawn_one()
+	var boar3: Pest = _spawner.spawn_one()
 	boar3.global_position = _player.global_position
 	for i in range(10):
 		await get_tree().physics_frame
@@ -154,6 +161,72 @@ func _ready() -> void:
 	_check("血量补满", _player.hp == Player.MAX_HP)
 	_check("损失一半金币 20 -> 10", _player.money == 10)
 	_check("被抬回出生点", _player.global_position.is_equal_approx(_spawn_pos))
+
+	# 清场：前面留了一只没打死的，会干扰后面的计数
+	for n in get_tree().get_nodes_in_group("pest"):
+		(n as Pest).queue_free()
+	await get_tree().process_frame
+	_check("清场后场上没有害兽", _count_pests() == 0)
+
+	print("--- 害兽种类 ---")
+	_check("数据表有 3 种", PestData.count() == 3)
+	_check("第 1 天只有野猪", PestData.kinds_for_day(1) == [0])
+	_check("第 2 天加入蝙蝠", PestData.kinds_for_day(2) == [0, 1])
+	_check("第 3 天加入蜘蛛", PestData.kinds_for_day(3) == [0, 1, 2])
+	_check("野猪 2 血 / 赏金 2", PestData.hp_of(0) == 2 and PestData.reward_of(0) == 2)
+	_check("蝙蝠 1 血 / 66 速 / 更快", PestData.hp_of(1) == 1 and is_equal_approx(PestData.speed_of(1), 66.0))
+	_check("蜘蛛 3 血 / 要啃 3 株", PestData.hp_of(2) == 3 and PestData.max_eats_of(2) == 3)
+	_check("野猪贴图在 (48,160)", PestData.region_of(0) == Rect2(48, 160, 16, 16))
+	_check("蝙蝠贴图在 (0,160)", PestData.region_of(1) == Rect2(0, 160, 16, 16))
+	_check("蜘蛛贴图在 (32,160)", PestData.region_of(2) == Rect2(32, 160, 16, 16))
+
+	var only_boar := true
+	for i in range(50):
+		if PestData.pick_kind(1) != 0:
+			only_boar = false
+	_check("第 1 天怎么抽都是野猪", only_boar)
+	var seen := {}
+	for i in range(300):
+		seen[PestData.pick_kind(3)] = true
+	_check("第 3 天三种都抽得到", seen.size() == 3)
+
+	var bat: Pest = _spawner.spawn_one(1)
+	_check("可以指定种类生成", bat != null and bat.kind == 1)
+	if bat == null:
+		_finish()
+		return
+	_check("蝙蝠血量来自数据表", bat.hp == 1)
+	_check("蝙蝠贴图跟着换", bat.sprite_2d.region_rect == Rect2(0, 160, 16, 16))
+
+	print("--- 击杀赏金 ---")
+	_player.money = 0
+	_player.global_position = bat.global_position
+	_player.active_item = Player.Item.SWORD
+	await get_tree().create_timer(0.5).timeout
+	_check("蝙蝠 1 血一刀带走", _ctl.use_held_item() == true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("击杀拿到赏金 2 金", _player.money == 2)
+	_check("蝙蝠已消失", _count_pests() == 0)
+
+	print("--- 蜘蛛啃一株不罢休 ---")
+	_land.clear_all_plants()
+	_player.seeds[0] = 5
+	var planted: int = 0
+	for i in range(3):
+		_move_to_tile(farm_tiles[i])
+		_player.active_item = Player.Item.SEED
+		if _ctl.use_held_item():
+			planted += 1
+	_check("种下三株", planted == 3)
+	var spider: Pest = _spawner.spawn_one(2)
+	spider.global_position = _land.to_global(_land.map_to_local(farm_tiles[0]))
+	for i in range(12):
+		await get_tree().physics_frame
+	print("  INFO 蜘蛛已啃 ", spider._eaten, " 株，场上 ", _count_pests(), " 只")
+	_check("蜘蛛啃掉了作物", _land.plants.size() < planted)
+	_check("蜘蛛啃一株后仍在场上", _count_pests() == 1 and is_instance_valid(spider))
+	_check("蜘蛛还没吃饱（3 株上限）", spider._eaten < 3)
 
 	_finish()
 

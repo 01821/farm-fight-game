@@ -116,6 +116,10 @@ func add_harvest(type_id: int, n: int = 1) -> void:
 		return
 	harvested[type_id] = maxi(0, harvested[type_id] + n)
 
+## 进账（卖作物、击杀赏金等）。目标判定由 FarmController 每帧读 money，这里不用通知谁。
+func earn(amount: int) -> void:
+	money += maxi(0, amount)
+
 # --- 水 ---
 
 func has_water() -> bool:

@@ -30,7 +30,7 @@ Scenes/                                   所有场景，按类型分子目录
   global/sfx.tscn                         音效单例场景（内含 10 个预建的 AudioStreamPlayer）
   character/player.tscn
   animals/base_animal.tscn                温顺的农场动物
-  animals/boar.tscn                       野猪（敌人），贴图取自 kenney_tiny-dungeon
+  animals/pest.tscn                       害兽（敌人），贴图取自 kenney_tiny-dungeon
   plants/{base_plant,tree_1,tree_2,tree_3}.tscn
   buildings/{house,water_bucket,water_container}.tscn   house = 商店
 Scripts/
@@ -41,7 +41,8 @@ Scripts/
   Global/sfx.gd                           自动加载单例 Sfx：播放音效
   ../Tools/gen_sfx.gd                     一次性音效合成器（不在 Scripts 下）
   Characters/{character,player,base_animal}.gd
-  Characters/boar.gd                      class_name Boar：野猪
+  Characters/pest.gd                      class_name Pest：害兽，种类由 PestData 配置
+  Characters/pest_data.gd                 class_name PestData：害兽数据表
   State/{State,state_machine}.gd          状态机基础设施
   State/{Player,animal}/{idle,move}.gd    具体状态
   plants/base_plant.gd                    作物：浇水驱动生长
@@ -248,17 +249,36 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 
 ### 战斗
 
-**野猪（Boar）** `Scripts/Characters/boar.gd`
+**害兽（Pest）** `Scripts/Characters/pest.gd` + `Scripts/Characters/pest_data.gd`
+
+同一个场景 `pest.tscn` 换 `kind` 就换一种敌人。**`kind` 必须在 `add_child` 之前设好**——
+`_ready` 会拿它配置血量/速度/贴图/赏金。
+
+| 种类 | 贴图格 | 血量 | 速度 | 啃几株才走 | 赏金 | 出场 |
+|---|---|---|---|---|---|---|
+| 野猪 | (3,10) | 2 | 38 | 1 | 2 金 | 第 1 天 |
+| 蝙蝠 | (0,10) | 1 | 66 | 1 | 2 金 | 第 2 天 |
+| 蜘蛛 | (2,10) | 3 | 30 | **3** | 5 金 | 第 3 天 |
+
+共同行为：
 
 | 项 | 值 |
 |---|---|
-| 血量 | 2 |
-| 速度 | 38 px/s（直线冲向最近的作物，不寻路） |
-| 吃作物范围 | 10px，啃掉后自己离场 |
+| 移动 | 直线冲向最近的作物，不寻路 |
+| 吃作物范围 | 10px |
 | 顶玩家 | 12px 内扣 1 血，冷却 1.5s |
 | 受击硬直 | 0.25s（**重要**：否则玩家砍中后它还继续跑，追击手感极差） |
-| 击退 | 砍中时沿「远离玩家」方向推开，初速 140 px/s，按 9/s 衰减（`take_damage(伤害, 攻击者位置)`） |
+| 击退 | 砍中时沿「远离玩家」方向推开，初速 140 px/s，按 9/s 衰减 |
 | 放弃条件 | 场上没作物 6 秒后离开；被卡住 3 秒后离开 |
+| 多啃间隔 | 啃完一株后愣 0.5s 再找下一株（`DIGEST_TIME`） |
+
+**刷新器（PestSpawner）**：**只在夜晚出动**，天亮全部撤退（撤退**不给赏金**）。
+
+- 每夜按「波」刷新：入夜**立刻**来第一波，之后每 8 秒一波
+- 每波只数 = `DayCycle.wave_size()` = `base_wave_size + 天数 - 1`（上限 6）
+- 每只的种类由 `PestData.pick_kind(天数)` 按权重抽——**天数越大，池子里越容易出现蝙蝠和蜘蛛**
+- 场上上限 6 只
+- 找不到 DayCycle 时退回 `always_active` 行为（给单元测试用）
 
 **玩家攻击**
 
@@ -270,13 +290,6 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 | 刀光 | 复用 `player.tscn` 里预建的 `Slash`(Polygon2D)，命中时显示 0.12s，按朝向翻转 `scale.x` |
 | 血量 | 5 |
 | 晕倒惩罚 | 损失一半金币，被抬回出生点，血量补满 |
-
-**刷新器（PestSpawner）**：**只在夜晚出动**，天亮全部撤退。
-
-- 每夜按「波」刷新：入夜**立刻**来第一波，之后每 8 秒一波
-- 每波只数 = `DayCycle.wave_size()` = `base_wave_size + 天数 - 1`（上限 6）
-- 场上上限 6 只
-- 找不到 DayCycle 时退回 `always_active` 行为（给单元测试用）
 
 ---
 
@@ -297,10 +310,12 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 
 | 行 | 内容 |
 |---|---|
-| 行 9 (y144) | 绿史莱姆(0)、褐软泥(1)、红恶魔(2)、棕怪(3)、绿衣人(4)；后面是药水、武器 |
-| 行 10 (y160) | 橙小怪(0)、幽灵(1)、暗红蜘蛛(2)、**獠牙野猪(3)**、绿菇怪(4)；后面是法杖 |
+| 行 9 (y144) | 绿史莱姆(0)、褐色小怪(1)、**红色螃蟹**(2)、棕灰软体(3)、绿头巾矮人(4)；后面是药水、武器 |
+| 行 10 (y160) | **蝙蝠**(0)、**灰色幽灵**(1)、**蜘蛛**(2)、**獠牙野猪**(3)、灰色骷髅(4)；后面是法杖 |
 
-野猪用 **`Rect2(48, 160, 16, 16)`**。
+> ⚠️ 订正：早先把「行 9 列 2」记成了红恶魔，8 倍放大后看清是**红色螃蟹**（两只大螯）。已不再使用该格。
+
+野猪用 **`Rect2(48, 160, 16, 16)`**，蝙蝠 `Rect2(0, 160, 16, 16)`，蜘蛛 `Rect2(32, 160, 16, 16)`。
 
 全部素材为 **CC0（Kenney）**，各目录下有 `License.txt`。
 
@@ -377,7 +392,8 @@ AnimationPlayer / StateMachine 等子节点，野猪场景没有，会直接报�
 - **手持道具系统**：Q 切换 种子袋 / 水壶 / 收获篮 / 剑，HUD 实时显示
 - **完整农场循环**：播种 → 浇水 → 逐级生长 → 成熟 → 收获
 - **经济循环**：在商店（房子）里卖作物、买种子
-- **战斗循环**：**夜晚**野猪成群来袭啃作物，用剑砍跑它；被顶会掉血；晕倒损失一半金币；天亮野猪撤退
+- **战斗循环**：**夜晚**害兽成群来袭啃作物，用剑砍跑它（有赏金）；被顶会掉血；晕倒损失一半金币；天亮害兽撤退
+- **害兽种类**：野猪 / 蝙蝠 / 蜘蛛，血量速度行为各异，随天数解锁
 - **昼夜循环**：45 秒一天，夜晚画面变暗，难度随天数爬坡
 - **目标**：攒够 300 金建成谷仓
 - **存档**：天亮自动存、启动自动读，F5/F9/F10 手动控制
@@ -423,7 +439,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 # 2) 农场 + 经济 + 多种作物端到端（66 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_farm.tscn --quit-after 3000 2>&1 | Out-String
 
-# 3) 战斗端到端（30 项）
+# 3) 战斗 + 害兽种类（54 项）
 & $godot --headless --path . --fixed-fps 60 res://Tests/test_combat.tscn --quit-after 3000 2>&1 | Out-String
 
 # 4) 昼夜 + 夜晚来袭 + 目标（26 项）
@@ -439,7 +455,7 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 & $godot --headless --path . --fixed-fps 60 --quit-after 6000 2>&1 | Out-String
 ```
 
-合计 206 项断言。
+合计 229 项断言。
 
 要点：
 - `--fixed-fps 60` 让时间步长确定，定时器/生长/移动行为可复现。
@@ -471,4 +487,5 @@ Set-Location 'E:\godot\farmAndFightGame\farmAndFightGame'
 | 8 | 多种作物（5 种，1-5 切换，价格与生长时间各不相同） | ✅ |
 | 9 | **音效**（代码合成 10 个提示音 + 预建 AudioStreamPlayer 单例） | ✅ |
 | 10 | 打磨：击退、胜利横幅、隐藏调试标签 | ✅ |
-| 11 | 还没做：攻击动画、更多敌种、昼夜影响生长速度、成就 | ⬜ |
+| 11 | **害兽种类 + 难度爬坡**（野猪/蝙蝠/蜘蛛，随天数解锁，击杀有赏金） | ✅ |
+| 12 | 还没做：攻击动画、昼夜影响生长速度、成就、多地图 | ⬜ |
