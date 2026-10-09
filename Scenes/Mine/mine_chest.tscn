@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Mine/mine_chest.gd" id="1_chest"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap_packed.png" id="2_tiles"]
+[ext_resource type="PackedScene" path="res://Scenes/Mine/mine_pickup.tscn" id="3_pickup"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_chest"]
+size = Vector2(18, 18)
+
+[node name="MineChest" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_chest")
+pickup_scene = ExtResource("3_pickup")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(162, 18, 18, 18)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_chest")

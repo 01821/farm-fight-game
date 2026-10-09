@@ -107,7 +107,7 @@ func _refresh_status() -> void:
 	]
 	# 火把 + 这趟的收获
 	var torch: float = MineRun.torch_left
-	torch_label.text = "火把 %d 秒   收获 %d 金" % [ceili(torch), MineRun.gold]
+	torch_label.text = "火把 %d 秒   收获 %d 金 / %d 矿" % [ceili(torch), MineRun.gold, MineRun.ore]
 	if torch <= 10.0:
 		torch_label.add_theme_color_override("font_color", Color(1, 0.4, 0.3))
 	else:

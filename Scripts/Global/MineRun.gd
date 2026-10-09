@@ -20,6 +20,8 @@ const TORCH_TIME: float = 75.0
 var active: bool = false
 ## 这一趟捡到的金币
 var gold: int = 0
+## 这一趟挖到的矿石块数（价值已经算进 gold 里了，这个只是给结算显示用）
+var ore: int = 0
 ## 这一趟赶跑的怪
 var kills: int = 0
 var torch_left: float = 0.0
@@ -32,6 +34,7 @@ var _pending: Dictionary = {}
 func start_run() -> void:
 	active = true
 	gold = 0
+	ore = 0
 	kills = 0
 	torch_left = TORCH_TIME
 	run_started.emit()
@@ -43,6 +46,14 @@ func add_gold(n: int) -> void:
 	gold += n
 	print("[矿洞] 捡到 ", n, " 金（这趟共 ", gold, "）")
 
+## 矿石：价值直接算进 gold，另外记一个块数给结算显示
+func add_ore(n: int) -> void:
+	if n <= 0:
+		return
+	ore += 1
+	gold += n
+	print("[矿洞] 挖到矿石 x1（值 ", n, " 金，这趟共 ", gold, " 金 / ", ore, " 块）")
+
 func add_kill() -> void:
 	kills += 1
 
@@ -51,9 +62,9 @@ func finish(success: bool) -> void:
 	if not active:
 		return
 	active = false
-	_pending = {"success": success, "gold": gold, "kills": kills}
+	_pending = {"success": success, "gold": gold, "kills": kills, "ore": ore}
 	print("[矿洞] 出洞 - ", "带回" if success else "丢掉",
-		"这趟收获：", gold, " 金，赶跑 ", kills, " 只")
+		"这趟收获：", gold, " 金 / ", ore, " 块矿石，赶跑 ", kills, " 只")
 	run_finished.emit(success, gold, kills)
 	if scene_switch_enabled:
 		get_tree().change_scene_to_file(FARM_SCENE)

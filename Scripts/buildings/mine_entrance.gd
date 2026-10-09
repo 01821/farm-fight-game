@@ -30,11 +30,12 @@ func _settle_previous_run() -> void:
 	var success: bool = bool(r.get("success", false))
 	var gold: int = int(r.get("gold", 0))
 	var kills: int = int(r.get("kills", 0))
+	var ore: int = int(r.get("ore", 0))
 	if success and gold > 0 and player != null:
 		player.earn(gold)
 		Sfx.play("coin")
 	print("[矿洞] 结算：", "带回 " if success else "丢掉 ", gold,
-		" 金（赶跑 ", kills, " 只），现在有 ", player.money if player != null else 0)
+		" 金 / ", ore, " 块矿石（赶跑 ", kills, " 只），现在有 ", player.money if player != null else 0)
 
 func is_player_inside() -> bool:
 	return _player_inside

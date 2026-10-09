@@ -96,18 +96,22 @@ func _ready() -> void:
 	print("  INFO 打死一只后：金币 ", before_gold, " → ", MineRun.gold, "，击杀 ", before_kills, " → ", MineRun.kills)
 	_check("击杀计数 +1", MineRun.kills == before_kills + 1)
 	var coins := get_tree().get_nodes_in_group("mine_pickup")
-	_check("地上掉了一份金币", coins.size() == 1)
-	if coins.size() == 1:
+	print("  INFO 地上有 ", coins.size(), " 份掉落")
+	_check("地上至少掉了一份", coins.size() >= 1)
+	if coins.size() >= 1:
 		var coin := coins[0] as MinePickup
-		# ⚠️ 先记下金额 —— 捡走后这个对象就被释放了，之后不能再读
+		# ⚠️ 先记下金额和位置 —— 捡走后这个对象就被释放了，之后不能再读
 		var coin_value: int = coin.amount
-		print("  INFO 这份金币值 ", coin_value)
+		var coin_pos: Vector2 = coin.global_position
+		print("  INFO 第一份值 ", coin_value, "，落点 ", coin_pos.round())
 		_check("掉的钱和怪的强度挂钩", coin_value > 0)
-		_player.global_position = coin.global_position
+		# 掉落物应该落回出生高度，而不是被瞬移到关卡顶部
+		_check("掉落物停在合理的高度（没有被瞬移到 y=0）", coin_pos.y > 100.0)
+		_player.global_position = coin_pos
 		await _step(6)
 		print("  INFO 捡完金币 = ", MineRun.gold)
 		_check("碰到就自动捡走", MineRun.gold == before_gold + coin_value)
-		_check("捡完金币从场上消失", get_tree().get_nodes_in_group("mine_pickup").is_empty())
+		_check("捡走的那份从场上消失", get_tree().get_nodes_in_group("mine_pickup").size() < coins.size())
 
 	print("--- 火把烧完 = 自动回农场（收获保留） ---")
 	MineRun.start_run()
@@ -132,7 +136,77 @@ func _ready() -> void:
 	_check("倒下是失败", not bool(r3.get("success")))
 	_check("失败时不带回金币（结算里 gold 仅供参考）", int(r3.get("gold")) == 50)
 
+	print("--- 矿石 ---")
+	_check("掉落物有 2 种（金币 / 矿石）", MinePickup.KINDS.size() == 2)
+	var coin_v: int = int(MinePickup.KINDS[0]["value"])
+	var ore_v: int = int(MinePickup.KINDS[1]["value"])
+	print("  INFO 金币值 ", coin_v, "，矿石值 ", ore_v)
+	_check("矿石比金币值钱", ore_v > coin_v)
+
+	MineRun.start_run()
+	var ore_drop := _level.pickup_scene.instantiate() as MinePickup
+	ore_drop.kind = MinePickup.Kind.ORE
+	ore_drop.amount = -1          # 用默认价值
+	_level.add_child(ore_drop)
+	ore_drop.global_position = _player.global_position
+	ore_drop.mark_spawn()
+	await _step(6)
+	print("  INFO 捡矿石后：gold=", MineRun.gold, " ore=", MineRun.ore)
+	_check("矿石计入块数", MineRun.ore == 1)
+	_check("矿石的价值也进了金币", MineRun.gold == ore_v)
+
+	print("--- 宝箱 ---")
+	var chest := _level.get_node("Chest1") as MineChest
+	_check("关卡里摆了宝箱", chest != null)
+	if chest != null:
+		_check("宝箱初始是关着的", not chest.is_opened())
+		var gold_before: int = MineRun.gold
+		var ore_before: int = MineRun.ore
+		_player.global_position = chest.global_position
+		await _step(8)
+		print("  INFO 碰到宝箱后：已开=", chest.is_opened(), "，gold=", MineRun.gold)
+		_check("碰到就自动打开", chest.is_opened())
+		_check("开箱后贴图变成打开的样子",
+			chest.sprite.region_rect == Rect2(11 * 18, 1 * 18, 18, 18))
+		_check("已经开过的箱子不会重复开", chest.open() == 0)
+
+		# ⚠️ 掉落是在玩家脚下生成的，会被**立刻捡走**，所以数不到"地上的份数"。
+		#    要验掉落数量，得先让玩家走开再开第二个箱子。
+		var chest2 := _level.get_node("Chest2") as MineChest
+		_player.global_position = Vector2(60, 198)
+		await _step(6)
+		var lying_before: int = get_tree().get_nodes_in_group("mine_pickup").size()
+		var spawned: int = chest2.open()
+		await _step(2)
+		var lying_after: int = get_tree().get_nodes_in_group("mine_pickup").size()
+		print("  INFO 走开再开箱：spawned=", spawned, "，地上 ", lying_before, " → ", lying_after)
+		_check("开箱掉出的份数 = 金币 + 矿石", spawned == chest2.coin_count + chest2.ore_count)
+		_check("这些掉落确实留在了地上", lying_after == lying_before + spawned)
+
+		# 把玩家挪到每一份掉落上，全捡掉（掉落可能已被捡走，所以要判有效性再转类型）
+		for round_i in range(5):
+			for node in get_tree().get_nodes_in_group("mine_pickup"):
+				if not is_instance_valid(node):
+					continue
+				var p := node as MinePickup
+				if p == null:
+					continue
+				_player.global_position = p.global_position
+				await _step(3)
+		await _step(6)
+		print("  INFO 全捡完：gold ", gold_before, " → ", MineRun.gold,
+			"，ore ", ore_before, " → ", MineRun.ore)
+		_check("宝箱的收获进了这趟账", MineRun.gold > gold_before)
+		_check("宝箱至少给了一块矿石", MineRun.ore > ore_before)
+		_check("捡完场上没有残留掉落", get_tree().get_nodes_in_group("mine_pickup").is_empty())
+
+	var torch_txt := (_level.get_node("MineHud/TorchLabel") as Label).text
+	print("  INFO ", torch_txt)
+	_check("HUD 同时显示金币和矿石", "金" in torch_txt and "矿" in torch_txt)
+
 	print("--- 农场那边的矿洞口 ---")
+	# 前面开着的那趟要先收掉，否则"不该误启动一趟"这条会被自己前面的状态干扰
+	MineRun.active = false
 	var farm := (load("res://Scenes/base_level.tscn") as PackedScene).instantiate()
 	add_child(farm)
 	var save := farm.get_node("SaveSystem") as SaveSystem

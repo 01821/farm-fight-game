@@ -74,13 +74,26 @@ func _on_enemy_died(enemy: MineEnemy) -> void:
 	MineRun.add_kill()
 	if pickup_scene == null or not is_instance_valid(enemy):
 		return
+	var from: Vector2 = enemy.global_position + Vector2(0, -12)
+	_spawn_drop(MinePickup.Kind.COIN, 1 + enemy.max_hp, from)
+	# 25% 概率额外掉一块矿石 —— 稀有才值得高兴
+	if randf() < 0.25:
+		_spawn_drop(MinePickup.Kind.ORE, -1, from)
+		print("[矿洞] ", enemy.display_name(), " 还掉了一块矿石！")
+
+func _spawn_drop(kind: int, value: int, at: Vector2) -> MinePickup:
+	if pickup_scene == null:
+		return null
 	var drop := pickup_scene.instantiate() as MinePickup
 	if drop == null:
-		return
+		return null
+	# kind / amount 要在 add_child **之前**设好 —— _ready 会拿它们初始化贴图和数值
+	drop.kind = kind
+	drop.amount = value
 	add_child(drop)
-	drop.global_position = enemy.global_position + Vector2(0, -12)
-	drop.amount = 1 + enemy.max_hp
-	print("[矿洞] ", enemy.display_name(), " 掉了 ", drop.amount, " 金")
+	drop.global_position = at
+	drop.mark_spawn()
+	return drop
 
 ## 这一趟结束：在洞里倒下就是失败，丢掉这趟收获
 func _on_player_died() -> void:
