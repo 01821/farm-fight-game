@@ -51,14 +51,58 @@ func _ready() -> void:
 	_check("有三个存档槽", SaveSystem.SLOT_COUNT == 3)
 	var hint := _title.get_node("Hint") as Label
 	print("  INFO 提示行：", hint.text)
-	_check("提示行说明了操作", "[1/2/3]" in hint.text)
-	_check("提示行有设置", "设置" in hint.text)
-	_check("提示行有退出", "退出" in hint.text)
+	_check("提示行告诉玩家鼠标能点", "鼠标" in hint.text)
 
 	print("--- 没有存档时三个槽都是「新游戏」 ---")
 	for i in range(1, 4):
 		print("  INFO 槽", i, "：", _title.slot_text(i))
 		_check("槽 %d 显示开始新游戏" % i, "新游戏" in _title.slot_text(i))
+
+	print("--- 鼠标交互（这一版新加的）---")
+	var btns: Array[Button] = [_title.get_node("Slots/Slot1"), _title.get_node("Slots/Slot2"), _title.get_node("Slots/Slot3")]
+	var settings_btn := _title.get_node("Bottom/SettingsButton") as Button
+	var quit_btn := _title.get_node("Bottom/QuitButton") as Button
+	for i in range(btns.size()):
+		var b: Button = btns[i]
+		_check("槽 %d 是真正的 Button（不是 Label）" % (i + 1), b != null)
+		_check("槽 %d 鼠标点得中（mouse_filter 不是 IGNORE）" % (i + 1),
+			b.mouse_filter != Control.MOUSE_FILTER_IGNORE)
+		_check("槽 %d 的按下事件有人接" % (i + 1), b.pressed.get_connections().size() > 0)
+		_check("槽 %d 有悬停变色反馈" % (i + 1),
+			b.get_theme_color("font_hover_color") != b.get_theme_color("font_color"))
+	print("  INFO 设置按钮：", settings_btn.text, "；退出按钮：", quit_btn.text)
+	_check("设置也是可点的 Button", settings_btn != null and settings_btn.mouse_filter != Control.MOUSE_FILTER_IGNORE)
+	_check("退出也是可点的 Button", quit_btn != null and quit_btn.mouse_filter != Control.MOUSE_FILTER_IGNORE)
+	_check("设置按钮接了处理函数", settings_btn.pressed.get_connections().size() > 0)
+
+	# 真按一下（不触发切场景的那条路，免得测试节点被销毁）
+	var before_open: bool = _title.settings_open
+	settings_btn.emit_signal("pressed")
+	await _step(3)
+	print("  INFO 点设置按钮之后 settings_open = ", _title.settings_open)
+	_check("点设置按钮真的打开了设置", _title.settings_open != before_open)
+	settings_btn.emit_signal("pressed")
+	await _step(3)
+	_check("再点一下收起", _title.settings_open == before_open)
+
+	print("--- 标题是动的 ---")
+	# 不去数 Tween 对象（Tween 不是 Node，不在 children 里），
+	# 直接验**行为**：盯着它的 y 看一段时间，有没有在变。
+	var title_label := _title.get_node("GameTitle") as Label
+	var y_min: float = title_label.position.y
+	var y_max: float = title_label.position.y
+	for i in range(90):
+		await get_tree().process_frame
+		y_min = minf(y_min, title_label.position.y)
+		y_max = maxf(y_max, title_label.position.y)
+	print("  INFO 标题 y 在 ", snappedf(y_min, 0.1), " ~ ", snappedf(y_max, 0.1), " 之间浮动")
+	_check("标题会上下浮动（界面是活的）", y_max - y_min > 1.0)
+
+	print("--- 背景不再是纯黑 ---")
+	var backdrop := _title.get_node_or_null("Backdrop") as TextureRect
+	_check("标题界面有背景图", backdrop != null and backdrop.texture != null)
+	var shade := _title.get_node_or_null("Shade") as ColorRect
+	_check("压了一层暗色让白字读得清", shade != null and shade.color.a > 0.0)
 
 	print("--- 有存档时显示「继续」+ 摘要 ---")
 	# 手写一份最小存档，模拟玩家玩过
@@ -91,7 +135,6 @@ func _ready() -> void:
 	print("  INFO 槽3：", _title.slot_text(3))
 	_check("旧版本存档仍然算「继续」", "继续" in _title.slot_text(3))
 	_check("并且标出「版本不符」", "版本不符" in _title.slot_text(3))
-
 	print("--- 设置面板 ---")
 	_check("默认关着", not _title.settings_open)
 	_tap("seed_4")

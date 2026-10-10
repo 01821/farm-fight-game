@@ -1,71 +1,131 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://Scripts/UI/title.gd" id="1_title"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap-backgrounds_packed.png" id="2_bg"]
 
-; 标题界面。整块预建，脚本只切可见性和文本。
-; 配色刻意压暗，让底下那层农场绿不那么刺眼。
+; ⚠️ TextureRect **没有 region_rect**（那是 Sprite2D 的）。
+;    直接给它整张图集的话，三个主题（白天/沙漠/森林）会并排拉满屏，
+;    看起来是八条竖色带。只取其中一段要用 AtlasTexture。
+[sub_resource type="AtlasTexture" id="AtlasTexture_titlebg"]
+atlas = ExtResource("2_bg")
+region = Rect2(0, 0, 72, 72)
+
+; 标题界面。
+; ⚠️ 三个存档槽是**真正的 Button 节点**，不是 Label —— 鼠标能点、有悬停反馈。
+;    键盘（1/2/3）也照旧能用，两条路并存。
 [node name="Title" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_title")
 
-[node name="Backdrop" type="ColorRect" parent="."]
+; 背景：用背景图集左边那一段（浅蓝天 + 云 + 树 + 远山），
+; 整张拉满屏。之前这里是纯黑的，一眼就不像个游戏。
+[node name="Backdrop" type="TextureRect" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.07, 0.08, 0.11, 1)
+texture = SubResource("AtlasTexture_titlebg")
+expand_mode = 1
+; stretch_mode：0 = SCALE（拉满），1 = TILE（平铺）。
+; 之前写成 1，于是 72px 高的背景在 300px 高的屏幕里**平铺了四次**，
+; 看起来是四条一模一样的山丘横带。
+stretch_mode = 0
+
+; 压一层暗色，让白字读得清
+[node name="Shade" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.06, 0.1, 0.55)
 
 [node name="GameTitle" type="Label" parent="."]
-offset_left = 40.0
-offset_top = 34.0
-offset_right = 360.0
-offset_bottom = 62.0
+offset_left = 30.0
+offset_top = 30.0
+offset_right = 370.0
+offset_bottom = 66.0
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "农 场 与 打 怪"
 
 [node name="SubTitle" type="Label" parent="."]
-offset_left = 40.0
-offset_top = 62.0
-offset_right = 360.0
-offset_bottom = 80.0
+offset_left = 30.0
+offset_top = 66.0
+offset_right = 370.0
+offset_bottom = 86.0
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "白天种田，夜里防兽，闲了下矿"
 
 [node name="Slots" type="Node" parent="."]
 
-[node name="Slot1" type="Label" parent="Slots"]
-offset_left = 70.0
-offset_top = 116.0
-offset_right = 330.0
-offset_bottom = 138.0
+[node name="Slot1" type="Button" parent="Slots"]
+offset_left = 80.0
+offset_top = 122.0
+offset_right = 320.0
+offset_bottom = 148.0
+theme_override_colors/font_color = Color(0.92, 0.92, 0.92, 1)
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.78, 0.3, 1)
 theme_override_font_sizes/font_size = 12
-text = "[1] 开始新游戏"
+text = "1 号存档"
+flat = true
 
-[node name="Slot2" type="Label" parent="Slots"]
-offset_left = 70.0
-offset_top = 146.0
-offset_right = 330.0
-offset_bottom = 168.0
+[node name="Slot2" type="Button" parent="Slots"]
+offset_left = 80.0
+offset_top = 154.0
+offset_right = 320.0
+offset_bottom = 180.0
+theme_override_colors/font_color = Color(0.92, 0.92, 0.92, 1)
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.78, 0.3, 1)
 theme_override_font_sizes/font_size = 12
-text = "[2] 开始新游戏"
+text = "2 号存档"
+flat = true
 
-[node name="Slot3" type="Label" parent="Slots"]
-offset_left = 70.0
-offset_top = 176.0
-offset_right = 330.0
-offset_bottom = 198.0
+[node name="Slot3" type="Button" parent="Slots"]
+offset_left = 80.0
+offset_top = 186.0
+offset_right = 320.0
+offset_bottom = 212.0
+theme_override_colors/font_color = Color(0.92, 0.92, 0.92, 1)
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.78, 0.3, 1)
 theme_override_font_sizes/font_size = 12
-text = "[3] 开始新游戏"
+text = "3 号存档"
+flat = true
+
+[node name="Bottom" type="Node" parent="."]
+
+[node name="SettingsButton" type="Button" parent="Bottom"]
+offset_left = 80.0
+offset_top = 228.0
+offset_right = 190.0
+offset_bottom = 250.0
+theme_override_colors/font_color = Color(0.8, 0.85, 0.95, 1)
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "[4] 设置"
+flat = true
+
+[node name="QuitButton" type="Button" parent="Bottom"]
+offset_left = 210.0
+offset_top = 228.0
+offset_right = 320.0
+offset_bottom = 250.0
+theme_override_colors/font_color = Color(0.8, 0.85, 0.95, 1)
+theme_override_colors/font_hover_color = Color(1, 0.75, 0.6, 1)
+theme_override_font_sizes/font_size = 12
+text = "退出游戏"
+flat = true
 
 [node name="Hint" type="Label" parent="."]
-offset_left = 40.0
-offset_top = 262.0
-offset_right = 360.0
-offset_bottom = 282.0
+offset_left = 20.0
+offset_top = 264.0
+offset_right = 380.0
+offset_bottom = 284.0
+theme_override_colors/font_color = Color(0.75, 0.8, 0.9, 1)
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
-text = "[1/2/3] 选存档槽    [4] 设置    [F5] 退出游戏"
+text = "鼠标点选，或者按 1/2/3"
 
 [node name="Settings" type="Control" parent="."]
 visible = false
@@ -79,26 +139,38 @@ color = Color(0.05, 0.06, 0.09, 0.96)
 
 [node name="SettingsTitle" type="Label" parent="Settings"]
 offset_left = 60.0
-offset_top = 90.0
+offset_top = 96.0
 offset_right = 340.0
-offset_bottom = 112.0
+offset_bottom = 118.0
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "设置"
 
-[node name="SfxLabel" type="Label" parent="Settings"]
-offset_left = 100.0
-offset_top = 132.0
-offset_right = 300.0
-offset_bottom = 152.0
+[node name="SfxButton" type="Button" parent="Settings"]
+offset_left = 110.0
+offset_top = 136.0
+offset_right = 290.0
+offset_bottom = 162.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
 theme_override_font_sizes/font_size = 12
 text = "[1] 音效：开"
+flat = true
+
+[node name="BackButton" type="Button" parent="Settings"]
+offset_left = 110.0
+offset_top = 176.0
+offset_right = 290.0
+offset_bottom = 202.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "[ESC] 返回"
 
 [node name="BackHint" type="Label" parent="Settings"]
-offset_left = 60.0
-offset_top = 200.0
-offset_right = 340.0
-offset_bottom = 220.0
+offset_left = 40.0
+offset_top = 240.0
+offset_right = 360.0
+offset_bottom = 260.0
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
-text = "[ESC] 返回"
+text = "音效开关会立刻生效"

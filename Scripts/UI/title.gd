@@ -4,10 +4,9 @@ extends Control
 ##
 ## ⚠️ 一条硬性约束：**这一版没有改变"直接跑 base_level 能玩"这件事**。
 ##    标题界面只是**额外的入口**，谁想直接开农场调试、跑测试，都照旧。
-##    所以 18 个测试套件不用跟着改，开发流程也没被打断。
 ##
-## 三个槽就是三个按钮：**有存档就继续，没存档就开新档** ——
-## 不用先选"新游戏/继续"再选槽，两步并成一步。
+## 交互上**鼠标和键盘并存**：三个槽是真 Button（能点、有悬停变色），
+## 1/2/3 也照旧能用 —— 键鼠两条路都通，玩家爱用哪个用哪个。
 
 const FARM_SCENE: String = "res://Scenes/base_level.tscn"
 
@@ -15,43 +14,75 @@ const FARM_SCENE: String = "res://Scenes/base_level.tscn"
 var sfx_on: bool = true
 ## 设置面板开着没有
 var settings_open: bool = false
+## 三个槽的点击次数（测试用：鼠标点一下会 +1）
+var slot_click_count: Array[int] = [0, 0, 0]
 
 @onready var slots_root: Node = $Slots
+@onready var slot_buttons: Array[Button] = [$Slots/Slot1, $Slots/Slot2, $Slots/Slot3]
+@onready var settings_button: Button = $Bottom/SettingsButton
+@onready var quit_button: Button = $Bottom/QuitButton
 @onready var settings_panel: Control = $Settings
+@onready var sfx_button: Button = $Settings/SfxButton
+@onready var back_button: Button = $Settings/BackButton
+@onready var game_title: Label = $GameTitle
 @onready var hint: Label = $Hint
 
 func _ready() -> void:
 	sfx_on = not AudioServer.is_bus_mute(AudioServer.get_bus_index("Master"))
+	# 鼠标这条路：真按钮，按下就触发。键盘那条走 _unhandled_input。
+	for i in range(slot_buttons.size()):
+		slot_buttons[i].pressed.connect(_on_slot_pressed.bind(i + 1))
+	settings_button.pressed.connect(toggle_settings)
+	quit_button.pressed.connect(quit_game)
+	sfx_button.pressed.connect(toggle_sfx)
+	back_button.pressed.connect(toggle_settings)
 	_refresh_slots()
+	_refresh_settings()
 	settings_panel.visible = false
+	_start_title_bob()
+
+## 标题轻轻上下浮动。
+## **静止的一屏字和会动的界面，给人的感觉完全是两回事** ——
+## 这是我这一版最想补的东西：之前的标题界面就是一块黑底加几行不动的字。
+func _start_title_bob() -> void:
+	var base_y: float = game_title.position.y
+	var tw := create_tween().set_loops()
+	tw.tween_property(game_title, "position:y", base_y + 4.0, 1.6) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(game_title, "position:y", base_y, 1.6) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _on_slot_pressed(slot: int) -> void:
+	if slot >= 1 and slot <= slot_click_count.size():
+		slot_click_count[slot - 1] += 1
+	choose_slot(slot)
 
 ## 把三个槽的摘要刷到界面上。
-## ⚠️ 这里**必须用自己的路径查询**，不能去找场景里的 SaveSystem ——
-##    标题界面里根本没有那个节点（它长在农场里），找的结果永远是 null，
-##    于是三个槽会一律显示"开始新游戏"，明明有存档也看不出来。
+## ⚠️ 必须用自己的路径查询，不能去找场景里的 SaveSystem ——
+##    标题界面里根本没有那个节点（它长在农场里），找的结果永远是 null。
 func _refresh_slots() -> void:
 	for i in range(1, SaveSystem.SLOT_COUNT + 1):
-		var label := slots_root.get_node_or_null("Slot%d" % i) as Label
-		if label == null:
+		var btn := slots_root.get_node_or_null("Slot%d" % i) as Button
+		if btn == null:
 			continue
-		var text: String = "[%d] " % i
+		var text: String = "%d 号存档 —— " % i
 		if slot_exists_direct(i):
 			var s: Dictionary = slot_summary_direct(i)
-			text += "继续 —— 第 %d 天 / %d 金" % [int(s.get("day", 1)), int(s.get("money", 0))]
+			text += "继续（第 %d 天 / %d 金）" % [int(s.get("day", 1)), int(s.get("money", 0))]
 			if not bool(s.get("ok", true)):
-				text += "（版本不符）"
+				text += " ⚠版本不符"
 		else:
 			text += "开始新游戏"
-		label.text = text
+		btn.text = text
 
 ## 当前槽的界面文本（测试直接读）
 func slot_text(i: int) -> String:
-	var label := slots_root.get_node_or_null("Slot%d" % i) as Label
-	return label.text if label != null else ""
+	if i < 1 or i > slot_buttons.size():
+		return ""
+	return slot_buttons[i - 1].text
 
 func settings_text() -> String:
-	var l := settings_panel.get_node_or_null("SfxLabel") as Label
-	return l.text if l != null else ""
+	return sfx_button.text if sfx_button != null else ""
 
 func slot_exists_direct(slot: int) -> bool:
 	return FileAccess.file_exists("user://farm_save_%d.json" % slot)
@@ -84,7 +115,6 @@ func choose_slot(slot: int) -> String:
 		return ""
 	var existed: bool = slot_exists_direct(slot)
 	if not existed:
-		# 新档：把这个槽里可能残留的旧文件清掉，避免读到一半的旧数据
 		DirAccess.remove_absolute("user://farm_save_%d.json" % slot)
 	_write_slot_choice(slot)
 	print("[标题] ", "继续" if existed else "开新档", "：第 ", slot, " 号槽")
@@ -113,9 +143,8 @@ func toggle_sfx() -> void:
 	print("[标题] 音效 ", "开" if sfx_on else "关")
 
 func _refresh_settings() -> void:
-	var l := settings_panel.get_node_or_null("SfxLabel") as Label
-	if l != null:
-		l.text = "[1] 音效：%s" % ("开" if sfx_on else "关")
+	if sfx_button != null:
+		sfx_button.text = "[1] 音效：%s" % ("开" if sfx_on else "关")
 
 func quit_game() -> void:
 	print("[标题] 退出游戏")
@@ -141,7 +170,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("seed_3"):
 		choose_slot(3)
 	elif event.is_action_pressed("quick_save"):
-		# F5 当"退出游戏"：标题界面里没有存/读的含义，别浪费这个键
 		quit_game()
 	else:
 		return
