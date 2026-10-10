@@ -43,6 +43,19 @@ var last_boss_day: int = -1
 var entry_day: int = 0
 ## 每日首通关底的额外奖励
 const DAILY_FIRST_GOLD: int = 30
+
+## --- 生涯累计（**不随每趟重置**，成就靠它判断）---
+var total_runs: int = 0
+var total_boss: int = 0
+var total_mine_kills: int = 0
+## 到过的最深层数
+var deepest: int = 0
+## 单趟带回最多的一次
+var best_run_gold: int = 0
+## 这一趟有没有倒下过（"一命通关"靠它判断）
+var died_this_run: bool = false
+## 有几次是"一次没倒、还把关底拆了"地出来的
+var flawless_runs: int = 0
 var torch_left: float = 0.0
 ## 测试用的开关：headless 测试里不能真的切场景（一切后面就没法继续跑断言了）。
 ## 关掉之后 finish() 只改状态、不切场景。
@@ -57,9 +70,13 @@ func start_run() -> void:
 	ore = 0
 	boss_down = false
 	kills = 0
+	died_this_run = false
 	torch_left = TORCH_TIME
+	# 生涯累计在这里加，其余的重置
+	total_runs += 1
+	deepest = maxi(deepest, 1)
 	run_started.emit()
-	print("[矿洞] 进洞，火把 ", int(TORCH_TIME), " 秒")
+	print("[矿洞] 进洞（第 ", total_runs, " 趟），火把 ", int(TORCH_TIME), " 秒")
 
 ## 第 depth 层的收获倍率
 func loot_multiplier() -> float:
@@ -78,6 +95,7 @@ func descend() -> bool:
 	if not active or is_deepest():
 		return false
 	depth += 1
+	deepest = maxi(deepest, depth)
 	print("[矿洞] 下到第 ", depth, " 层（收获 x", loot_multiplier(), "，火把只剩 ",
 		int(torch_left), " 秒）")
 	return true
@@ -97,13 +115,26 @@ func add_ore(n: int) -> void:
 
 func add_kill() -> void:
 	kills += 1
+	total_mine_kills += 1
+
+## 在洞里倒下了。除了结束这趟，还要记下来 ——「一命通关」成就要看它。
+func mark_died() -> void:
+	died_this_run = true
 
 ## success = true 保留这趟收获；false = 丢掉（在洞里倒下了）
 func finish(success: bool) -> void:
 	if not active:
 		return
 	active = false
-	_pending = {"success": success, "gold": gold, "kills": kills, "ore": ore, "boss_down": boss_down}
+	if success:
+		best_run_gold = maxi(best_run_gold, gold)
+	if boss_down:
+		total_boss += 1
+	# 一命通关：全程没倒下 + 拆了关底 + 活着出来
+	if success and boss_down and not died_this_run:
+		flawless_runs += 1
+	_pending = {"success": success, "gold": gold, "kills": kills, "ore": ore, "boss_down": boss_down,
+		"depth": depth, "flawless": boss_down and not died_this_run and success}
 	print("[矿洞] 出洞 - ", "带回" if success else "丢掉",
 		"这趟收获：", gold, " 金 / ", ore, " 块矿石，赶跑 ", kills, " 只",
 		"，关底", "已拆" if boss_down else "没拆")
@@ -137,7 +168,19 @@ func claim_daily() -> int:
 #    这一趟的 gold / depth / boss_down 都是临时状态，切场景就该没了，不该进存档。
 
 func to_save_data() -> Dictionary:
-	return {"last_boss_day": last_boss_day}
+	return {
+		"last_boss_day": last_boss_day,
+		"total_runs": total_runs, "total_boss": total_boss,
+		"total_mine_kills": total_mine_kills, "deepest": deepest,
+		"best_run_gold": best_run_gold,
+		"flawless_runs": flawless_runs,
+	}
 
 func apply_save_data(d: Dictionary) -> void:
 	last_boss_day = int(d.get("last_boss_day", -1))
+	total_runs = maxi(0, int(d.get("total_runs", 0)))
+	total_boss = maxi(0, int(d.get("total_boss", 0)))
+	total_mine_kills = maxi(0, int(d.get("total_mine_kills", 0)))
+	deepest = maxi(0, int(d.get("deepest", 0)))
+	best_run_gold = maxi(0, int(d.get("best_run_gold", 0)))
+	flawless_runs = maxi(0, int(d.get("flawless_runs", 0)))

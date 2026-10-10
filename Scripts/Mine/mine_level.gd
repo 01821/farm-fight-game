@@ -213,6 +213,7 @@ func _spawn_drop(kind: int, value: int, at: Vector2) -> MinePickup:
 
 ## 这一趟结束：在洞里倒下就是失败，丢掉这趟收获
 func _on_player_died() -> void:
+	MineRun.mark_died()
 	MineRun.finish(false)
 
 func _process(delta: float) -> void:

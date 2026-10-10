@@ -460,6 +460,100 @@ func _ready() -> void:
 
 	MineRun.active = false
 	MineRun.scene_switch_enabled = true
+	print("--- 生涯累计 ---")
+	# ⚠️ 前面那节结尾把 scene_switch_enabled 恢复成了 true 方便后续用 ——
+	#    这里必须再关掉。否则下面调 finish() 会**真的切场景**，
+	#    测试节点当场被销毁，后面全是 "physics_frame on null instance"（刚踩过）。
+	MineRun.scene_switch_enabled = false
+	MineRun.total_runs = 0
+	MineRun.total_boss = 0
+	MineRun.deepest = 0
+	MineRun.flawless_runs = 0
+	MineRun.best_run_gold = 0
+	MineRun.died_this_run = false
+
+	MineRun.start_run()
+	_check("进一趟就 +1 趟", MineRun.total_runs == 1)
+	_check("进洞就算到过第 1 层", MineRun.deepest >= 1)
+	MineRun.descend()
+	MineRun.descend()
+	_check("下到第 3 层，最深记录跟着走", MineRun.deepest == 3)
+	MineRun.boss_down = true
+	MineRun.gold = 200
+	MineRun.finish(true)
+	print("  INFO 一趟之后：趟数 ", MineRun.total_runs, "，拆关底 ", MineRun.total_boss,
+		"，最深 ", MineRun.deepest, "，单趟最佳 ", MineRun.best_run_gold,
+		"，一命通关 ", MineRun.flawless_runs)
+	_check("拆了关底就 +1", MineRun.total_boss == 1)
+	_check("记下单趟最佳收获", MineRun.best_run_gold == 200)
+	_check("没倒下 + 拆关底 = 一命通关", MineRun.flawless_runs == 1)
+
+	# 倒下的那一趟不算一命通关
+	MineRun.start_run()
+	MineRun.mark_died()
+	MineRun.boss_down = true
+	MineRun.finish(false)
+	_check("倒下那趟不算一命通关", MineRun.flawless_runs == 1)
+	_check("失败那趟不刷新最佳收获", MineRun.best_run_gold == 200)
+
+	print("--- 成就：矿洞那一批 ---")
+	var ach := farm2.get_node_or_null("Achievements") as Achievements
+	_check("农场里有成就系统", ach != null)
+	if ach != null:
+		_check("成就总数是 12（6 农场 + 6 矿洞）", ach.total() == 12)
+		for id in ["first_mine", "mine_depth_3", "boss_slayer", "boss_5", "flawless_boss", "mine_rich"]:
+			ach.unlocked_ids.erase(id)
+		await _step(4)
+		print("  INFO 解锁情况：累计趟数 ", MineRun.total_runs, "，关底 ", MineRun.total_boss,
+			"，最深 ", MineRun.deepest, "，最佳 ", MineRun.best_run_gold,
+			"，一命 ", MineRun.flawless_runs)
+		_check("初次下矿解锁了", ach.has("first_mine"))
+		_check("深入地底解锁了（到过第 3 层）", ach.has("mine_depth_3"))
+		_check("拆掉关底解锁了", ach.has("boss_slayer"))
+		_check("全身而退解锁了", ach.has("flawless_boss"))
+		_check("满载而归解锁了（单趟 200 > 150）", ach.has("mine_rich"))
+		_check("拆 5 台还没到，不该解锁", not ach.has("boss_5"))
+
+		# 把条件凑够，验证它真的会在农场里解锁
+		MineRun.total_boss = 5
+		await _step(4)
+		_check("拆够 5 台之后解锁了", ach.has("boss_5"))
+
+		# 反例：把矿洞累计清零，矿洞那几条不该再被判成达成。
+		# ⚠️ 只清 MineRun —— 农场类成就看的是**玩家的**生涯计数，清不掉也不该清。
+		MineRun.total_runs = 0
+		MineRun.total_boss = 0        # 这个也得清 —— 漏了它"拆关底"那两条照样解锁
+		MineRun.deepest = 0
+		MineRun.flawless_runs = 0
+		MineRun.best_run_gold = 0
+		ach.unlocked_ids.clear()
+		await _step(4)
+		var mine_unlocked: int = 0
+		for id in ["first_mine", "mine_depth_3", "boss_slayer", "boss_5", "flawless_boss", "mine_rich"]:
+			if ach.has(id):
+				mine_unlocked += 1
+		print("  INFO 清零后：解锁总数 ", ach.count(), "，其中矿洞类 ", mine_unlocked)
+		_check("清零之后矿洞类成就一个都不该解锁", mine_unlocked == 0)
+
+	print("--- 生涯累计要能存档 ---")
+	MineRun.total_runs = 7
+	MineRun.total_boss = 3
+	MineRun.deepest = 2
+	MineRun.best_run_gold = 123
+	MineRun.flawless_runs = 2
+	var md: Dictionary = MineRun.to_save_data()
+	MineRun.total_runs = 0
+	MineRun.total_boss = 0
+	MineRun.deepest = 0
+	MineRun.best_run_gold = 0
+	MineRun.flawless_runs = 0
+	MineRun.apply_save_data(md)
+	_check("读档读回趟数", MineRun.total_runs == 7)
+	_check("读档读回关底数", MineRun.total_boss == 3)
+	_check("读档读回最深", MineRun.deepest == 2)
+	_check("读档读回单趟最佳", MineRun.best_run_gold == 123)
+	_check("读档读回一命通关次数", MineRun.flawless_runs == 2)
+
 	_release_all()
 	print("RESULT fail=", _fail)
 	get_tree().quit()
