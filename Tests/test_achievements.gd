@@ -53,10 +53,11 @@ func _ready() -> void:
 
 	print("--- 初始 ---")
 	_check("成就节点存在", _ach != null)
-	_check("共有 6 个成就", _ach.total() == 6)
+	# 别把总数写死 —— 加一批矿洞成就就会让写死的数字失效（已经踩过一次）
+	_check("成就表不是空的", _ach.total() >= 6)
 	_check("一个都没解锁", _ach.count() == 0)
 	_check("提示条隐藏", toast.visible == false and _ach.toast_visible() == false)
-	_check("HUD 显示成就进度 0/6", "0/6" in farm.text)
+	_check("HUD 显示成就进度 0/N", "0/%d" % _ach.total() in farm.text)
 
 	print("--- 逐个解锁 ---")
 	_player.total_harvested = 1
@@ -65,7 +66,7 @@ func _ready() -> void:
 	_check("提示条亮起", toast.visible == true)
 	_check("提示文本正确", toast.text == "成就达成：初次丰收")
 	print("  INFO 提示文本 = ", toast.text)
-	_check("HUD 进度变成 1/6", "1/6" in farm.text)
+	_check("HUD 进度变成 1/N", "1/%d" % _ach.total() in farm.text)
 
 	_player.total_kills = 1
 	await _step(2)
