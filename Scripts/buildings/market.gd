@@ -59,8 +59,17 @@ func sell_crops(player: Player) -> bool:
 			detail += "、"
 		detail += "%s x%d" % [CropData.name_of(type_id), n]
 		player.harvested[type_id] = 0
+	# 动物产出和作物一起卖。玩家不用记"蛋该去哪卖"。
+	var goods: int = player.goods_total()
+	if goods > 0:
+		base_total += goods * AnimalProduct.PRICE
+		count += goods
+		if detail != "":
+			detail += "、"
+		detail += "%s x%d" % [AnimalProduct.GOODS_NAME, goods]
+		player.animal_goods = 0
 	if count <= 0:
-		print("[商店] 篮子是空的，先去收获作物")
+		print("[商店] 篮子是空的，先去收获作物或者收畜产")
 		return false
 	var total: int = int(round(float(base_total) * Progression.sell_multiplier()))
 	player.money += total

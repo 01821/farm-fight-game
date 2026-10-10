@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Characters/animal_product.gd" id="1_ap"]
+
+; 拾取范围比蛋略大一圈，走过去就能收，不用对准
+[sub_resource type="CircleShape2D" id="CircleShape2D_ap"]
+radius = 12.0
+
+[node name="AnimalProduct" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_ap")
+
+; 一个蛋：奶白色的椭圆 + 一点高光。
+; 图集里没有蛋，所以用多边形画（和地刺同一种做法）。
+[node name="Shell" type="Polygon2D" parent="."]
+color = Color(0.97, 0.94, 0.85, 1)
+polygon = PackedVector2Array(0, -7, 2.6, -5.6, 4.2, -2.4, 4.6, 1.4, 3.4, 4.4, 1.4, 6.2, -1.4, 6.2, -3.4, 4.4, -4.6, 1.4, -4.2, -2.4, -2.6, -5.6)
+
+[node name="Shine" type="Polygon2D" parent="."]
+color = Color(1, 1, 1, 0.75)
+polygon = PackedVector2Array(-2.2, -2.6, -1.0, -4.0, 0.2, -3.2, -0.8, -1.8)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_ap")

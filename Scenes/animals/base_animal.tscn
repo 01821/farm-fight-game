@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://br6la6uadugqv" path="res://Scripts/State/state_machine.gd" id="2_7h0qj"]
 [ext_resource type="Script" uid="uid://bc01ugsqsgtga" path="res://Scripts/State/animal/idle.gd" id="3_1mpki"]
 [ext_resource type="Script" uid="uid://dx2klji2an6we" path="res://Scripts/State/animal/move.gd" id="4_jj0bc"]
+[ext_resource type="PackedScene" path="res://Scenes/animals/animal_product.tscn" id="5_prod"]
 
 [sub_resource type="Animation" id="Animation_p5wag"]
 resource_name = "Idle"
@@ -103,6 +104,7 @@ radius = 6.0
 [node name="base_animal" type="CharacterBody2D" unique_id=1730941467]
 collision_layer = 4
 script = ExtResource("1_jj0bc")
+product_scene = ExtResource("5_prod")
 metadata/_custom_type_script = "uid://bs3e6ep6ea3uf"
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=2142658080]

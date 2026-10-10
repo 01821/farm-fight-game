@@ -38,6 +38,10 @@ var active_item: int = Item.SEED
 ## 生涯累计（成就用，不随卖作物清零）
 var total_harvested: int = 0
 var total_kills: int = 0
+## 手里还没卖掉的动物产出（蛋/奶）
+var animal_goods: int = 0
+## 累计收过多少畜产（统计用，只增不减）
+var total_goods: int = 0
 
 ## 当前重叠的水源数量（站在水源旁自动补水）
 var _water_source_count: int = 0
@@ -167,7 +171,19 @@ func basket_total() -> int:
 	var n: int = 0
 	for v in harvested:
 		n += v
-	return n
+	return n + animal_goods
+
+## 动物产出（蛋/奶）。和作物分开计数，但**在商店里一起卖** ——
+## 玩家不用记"这个该去哪卖"。
+func add_goods(n: int = 1) -> void:
+	if n <= 0:
+		return
+	animal_goods += n
+	total_goods += n
+	print("[农场] 收了一个畜产，现在 ", animal_goods, " 个")
+
+func goods_total() -> int:
+	return animal_goods
 
 func add_harvest(type_id: int, n: int = 1) -> void:
 	if not CropData.is_valid(type_id):
@@ -244,6 +260,7 @@ func to_save_data() -> Dictionary:
 		"seeds": Array(seeds), "harvested": Array(harvested),
 		"seed_type": seed_type, "active_item": active_item,
 		"total_harvested": total_harvested, "total_kills": total_kills,
+		"animal_goods": animal_goods, "total_goods": total_goods,
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -255,6 +272,8 @@ func apply_save_data(d: Dictionary) -> void:
 	active_item = clampi(int(d.get("active_item", Item.SEED)), 0, ITEM_NAMES.size() - 1)
 	total_harvested = maxi(0, int(d.get("total_harvested", 0)))
 	total_kills = maxi(0, int(d.get("total_kills", 0)))
+	animal_goods = maxi(0, int(d.get("animal_goods", 0)))
+	total_goods = maxi(0, int(d.get("total_goods", 0)))
 	_read_counts(d.get("seeds", null), seeds)
 	_read_counts(d.get("harvested", null), harvested)
 	global_position = Vector2(
