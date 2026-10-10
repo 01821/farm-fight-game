@@ -191,30 +191,55 @@ func _ready() -> void:
 	_player.cast_skill(3)
 	_check("治疗不会超过上限", _player.hp == MinePlayer.MAX_HP)
 
-	print("--- 消耗品：回血药（和技能是分开的两套资源） ---")
+	print("--- 消耗品：三种药（和技能是分开的两套资源） ---")
 	_reset_skills()
-	_player.potions = MinePlayer.POTION_START
+	_player.potions = [3, 2, 1]
 	_player.hp = MinePlayer.MAX_HP
-	_check("开局带 3 瓶药", _player.potions == 3)
-	_check("满血时不该喝", _player.can_use_potion() == false)
-	_check("满血时喝药被拒", _player.use_potion() == false)
-	_check("被拒时不消耗药", _player.potions == 3)
+	_player.energy = float(MineCombatData.ENERGY_MAX)
+	_check("三种药各有初始数量", _player.potion_count(0) == 3 and _player.potion_count(1) == 2 and _player.potion_count(2) == 1)
+	_check("药名对得上", _player.potion_name(0) == "回血药" and _player.potion_name(1) == "能量药" and _player.potion_name(2) == "全力药")
 
+	# 1 回血药
+	_check("满血时不该喝回血药", _player.can_use_potion(0) == false)
+	_check("满血时喝会被拒", _player.use_potion(0) == false)
+	_check("被拒时不消耗药", _player.potion_count(0) == 3)
 	_player.hp = 2
-	_check("掉血后可以喝", _player.can_use_potion())
-	_check("喝药成功", _player.use_potion() == true)
-	print("  INFO 喝完血量 = ", _player.hp, "，剩 ", _player.potions, " 瓶")
+	_check("掉血后可以喝", _player.can_use_potion(0))
+	_check("喝药成功", _player.use_potion(0) == true)
+	print("  INFO 喝完血量 = ", _player.hp, "，剩 ", _player.potion_count(0), " 瓶")
 	_check("回 2 点血", _player.hp == 4)
-	_check("药少一瓶", _player.potions == 2)
-
+	_check("药少一瓶", _player.potion_count(0) == 2)
 	_player.hp = MinePlayer.MAX_HP - 1
-	_player.use_potion()
+	_player.use_potion(0)
 	_check("回血不会超过上限", _player.hp == MinePlayer.MAX_HP)
 
-	_player.potions = 0
+	# 2 能量药
+	_check("满能量时不该喝能量药", _player.use_potion(1) == false)
+	_player.energy = 3.0
+	var e_before: float = _player.energy
+	_check("能量不满时可以喝", _player.use_potion(1) == true)
+	print("  INFO 能量 ", int(e_before), " → ", int(_player.energy), "，剩 ", _player.potion_count(1), " 瓶")
+	_check("回 12 点能量", int(_player.energy) == int(e_before) + MinePlayer.ENERGY_AMOUNT)
+	_check("能量药少一瓶", _player.potion_count(1) == 1)
+	_check("能量不会超过上限", _player.energy <= float(MineCombatData.ENERGY_MAX))
+
+	# 3 全力药
+	_player.hp = 2
+	_player.energy = 1.0
+	_check("全力药可以用", _player.use_potion(2) == true)
+	print("  INFO 全力药后：血 ", _player.hp, "，能量 ", int(_player.energy))
+	_check("全力药把血补满", _player.hp == MinePlayer.MAX_HP)
+	_check("全力药把能量补满", is_equal_approx(_player.energy, float(MineCombatData.ENERGY_MAX)))
+	_check("全力药只剩 0 瓶（开局就 1 瓶）", _player.potion_count(2) == 0)
+	_check("用完之后用不了", _player.use_potion(2) == false)
+
+	# 用光
+	_player.potions = [0, 0, 0]
 	_player.hp = 1
-	_check("没药了就喝不了", _player.use_potion() == false)
-	_check("没药时 can_use_potion 也是 false", _player.can_use_potion() == false)
+	_player.energy = 0.0
+	_check("全用光后三种都喝不了",
+		_player.use_potion(0) == false and _player.use_potion(1) == false and _player.use_potion(2) == false)
+	_check("越界的 id 直接返回 false", _player.use_potion(99) == false and _player.potion_count(99) == 0)
 
 	print("--- P 技能表 ---")
 	var hud2 := _level.get_node("MineHud") as MineHud
@@ -240,10 +265,13 @@ func _ready() -> void:
 	_check("再按一次收起", backdrop.visible == false)
 
 	var potion_label := _level.get_node("MineHud/PotionLabel") as Label
-	_player.potions = 2
+	_player.potions = [2, 1, 0]
 	await _step(3)
 	print("  INFO ", potion_label.text)
-	_check("HUD 显示药瓶数", "2" in potion_label.text and "回血药" in potion_label.text)
+	_check("HUD 把三种药都列出来了",
+		("回血药" in potion_label.text) and ("能量药" in potion_label.text) and ("全力药" in potion_label.text))
+	_check("HUD 显示各自的剩余瓶数", ("x2" in potion_label.text) and ("x1" in potion_label.text) and ("x0" in potion_label.text))
+	_check("HUD 显示按键 1/2/3", ("[1]" in potion_label.text) and ("[2]" in potion_label.text) and ("[3]" in potion_label.text))
 
 	print("--- HUD 技能栏 ---")
 	var hud := _level.get_node("MineHud") as MineHud

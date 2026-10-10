@@ -99,19 +99,29 @@ func _ready() -> void:
 	print("  INFO 地上有 ", coins.size(), " 份掉落")
 	_check("地上至少掉了一份", coins.size() >= 1)
 	if coins.size() >= 1:
-		var coin := coins[0] as MinePickup
-		# ⚠️ 先记下金额和位置 —— 捡走后这个对象就被释放了，之后不能再读
-		var coin_value: int = coin.amount
-		var coin_pos: Vector2 = coin.global_position
-		print("  INFO 第一份值 ", coin_value, "，落点 ", coin_pos.round())
-		_check("掉的钱和怪的强度挂钩", coin_value > 0)
+		# ⚠️ 怪有 25% 概率**同时**掉金币和矿石，所以不能只盯第一份 ——
+		#    按"地上所有掉落的总账"来验，既稳定又更强。
+		#    另外：金额和位置都要在捡之前记下来，捡走后对象就被释放了。
+		var expected_gain: int = 0
+		var spots: Array[Vector2] = []
+		for node in coins:
+			if not is_instance_valid(node):
+				continue
+			var pk := node as MinePickup
+			if pk == null:
+				continue
+			expected_gain += pk.amount
+			spots.append(pk.global_position)
+		print("  INFO 这批掉落合计 ", expected_gain, "，第一份落点 ", spots[0].round() if spots.size() > 0 else "?")
 		# 掉落物应该落回出生高度，而不是被瞬移到关卡顶部
-		_check("掉落物停在合理的高度（没有被瞬移到 y=0）", coin_pos.y > 100.0)
-		_player.global_position = coin_pos
-		await _step(6)
-		print("  INFO 捡完金币 = ", MineRun.gold)
-		_check("碰到就自动捡走", MineRun.gold == before_gold + coin_value)
-		_check("捡走的那份从场上消失", get_tree().get_nodes_in_group("mine_pickup").size() < coins.size())
+		_check("掉落物停在合理的高度（没有被瞬移到 y=0）", spots.size() > 0 and spots[0].y > 100.0)
+		for s in spots:
+			_player.global_position = s
+			await _step(3)
+		await _step(4)
+		print("  INFO 全捡完金币 = ", MineRun.gold, "（预期 ", before_gold + expected_gain, "）")
+		_check("碰到就自动捡走（总账对得上）", MineRun.gold == before_gold + expected_gain)
+		_check("捡完地上没有残留", get_tree().get_nodes_in_group("mine_pickup").is_empty())
 
 	print("--- 火把烧完 = 自动回农场（收获保留） ---")
 	MineRun.start_run()

@@ -43,10 +43,19 @@ const HURT_KNOCKBACK_Y: float = -150.0
 const DASH_DAMAGE: int = 1
 const DASH_KNOCK: float = 90.0
 
-## 消耗品：回血药。开局带 3 瓶，每瓶回 2 点血。
-## 和技能是**两套分开的资源**（参考游戏里技能是 H U I O、物品是 1/2/3）。
-const POTION_START: int = 3
-const POTION_HEAL: int = 2
+## 消耗品：三种药，分别绑在 1 / 2 / 3 上。
+## 和技能是**两套分开的资源**（参考游戏里技能是 H U I O、物品是 1/2/3）：
+## 技能吃能量，药吃瓶数。
+enum Potion { HEAL, ENERGY, POWER }
+
+const POTION_START: Array[int] = [3, 2, 1]
+const POTION_INFO: Array[Dictionary] = [
+	{"name": "回血药", "key": "1", "desc": "回 2 点生命"},
+	{"name": "能量药", "key": "2", "desc": "回 12 点能量"},
+	{"name": "全力药", "key": "3", "desc": "生命与能量全满"},
+]
+const HEAL_AMOUNT: int = 2
+const ENERGY_AMOUNT: int = 12
 
 ## 飘字场景，在场景文件里预先接好，不在代码里 load
 @export var damage_number_scene: PackedScene
@@ -55,8 +64,8 @@ var facing: int = 1
 var hp: int = MAX_HP
 var weapon_id: int = 0
 var energy: float = float(MineCombatData.ENERGY_MAX)
-## 回血药数量（这趟带进来的）
-var potions: int = POTION_START
+## 三种药各剩几瓶
+var potions: Array[int] = [3, 2, 1]
 ## P 键技能表开着没有
 var skill_list_open: bool = false
 ## 每个技能的剩余冷却
@@ -126,7 +135,11 @@ func _physics_process(delta: float) -> void:
 		skill_list_open = not skill_list_open
 		print("[矿洞] 技能表 ", "打开" if skill_list_open else "收起")
 	if Input.is_action_just_pressed("item_1"):
-		use_potion()
+		use_potion(Potion.HEAL)
+	if Input.is_action_just_pressed("item_2"):
+		use_potion(Potion.ENERGY)
+	if Input.is_action_just_pressed("item_3"):
+		use_potion(Potion.POWER)
 	for i in range(MineCombatData.skill_count()):
 		if Input.is_action_just_pressed("skill_%d" % (i + 1)):
 			cast_skill(i)
@@ -230,24 +243,59 @@ func can_attack() -> bool:
 
 # --- 消耗品 ---
 
-## 喝一瓶回血药。返回有没有喝成（没药 / 满血 都会返回 false）。
-## 注意和技能是分开的两套资源：技能吃能量，药物吃瓶数。
-func use_potion() -> bool:
-	if potions <= 0:
-		print("[矿洞] 没药了")
+## 用一瓶药。返回有没有用成（没药 / 用了也是白用 都会返回 false）。
+## **白用的情况不扣药** —— 满血喝回血药、满能量喝能量药都会被拒。
+func use_potion(id: int) -> bool:
+	if id < 0 or id >= potions.size():
 		return false
-	if hp >= MAX_HP:
-		print("[矿洞] 血是满的，留着吧")
+	if potions[id] <= 0:
+		print("[矿洞] ", String(POTION_INFO[id]["name"]), " 用完了")
 		return false
-	potions -= 1
-	var before: int = hp
-	hp = mini(hp + POTION_HEAL, MAX_HP)
+	if not _potion_has_effect(id):
+		print("[矿洞] ", String(POTION_INFO[id]["name"]), " 现在用是浪费，留着吧")
+		return false
+	potions[id] -= 1
+	var before_hp: int = hp
+	var before_en: float = energy
+	match id:
+		Potion.HEAL:
+			hp = mini(hp + HEAL_AMOUNT, MAX_HP)
+		Potion.ENERGY:
+			energy = minf(energy + float(ENERGY_AMOUNT), float(MineCombatData.ENERGY_MAX))
+		Potion.POWER:
+			hp = MAX_HP
+			energy = float(MineCombatData.ENERGY_MAX)
 	Sfx.play("buy")
-	print("[矿洞] 喝药回 ", hp - before, " 点（", before, " -> ", hp, "），还剩 ", potions, " 瓶")
+	print("[矿洞] 用了 ", String(POTION_INFO[id]["name"]),
+		"：血 ", before_hp, "→", hp, "，能量 ", int(before_en), "→", int(energy),
+		"，还剩 ", potions[id], " 瓶")
 	return true
 
-func can_use_potion() -> bool:
-	return potions > 0 and hp < MAX_HP
+## 这瓶药现在有没有意义（满了就不该浪费）
+func _potion_has_effect(id: int) -> bool:
+	match id:
+		Potion.HEAL:
+			return hp < MAX_HP
+		Potion.ENERGY:
+			return energy < float(MineCombatData.ENERGY_MAX)
+		Potion.POWER:
+			return hp < MAX_HP or energy < float(MineCombatData.ENERGY_MAX)
+	return false
+
+func can_use_potion(id: int) -> bool:
+	if id < 0 or id >= potions.size():
+		return false
+	return potions[id] > 0 and _potion_has_effect(id)
+
+func potion_count(id: int) -> int:
+	if id < 0 or id >= potions.size():
+		return 0
+	return potions[id]
+
+func potion_name(id: int) -> String:
+	if id < 0 or id >= POTION_INFO.size():
+		return "?"
+	return String(POTION_INFO[id]["name"])
 
 # --- 技能 ---
 

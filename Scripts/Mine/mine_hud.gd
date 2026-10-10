@@ -113,11 +113,23 @@ func _refresh_status() -> void:
 	else:
 		torch_label.add_theme_color_override("font_color", Color(1, 0.86, 0.5))
 	# 消耗品（和技能是分开的两套资源）
-	potion_label.text = "[1] 回血药 x%d（回 %d 点）    [P] 技能表" % [_player.potions, MinePlayer.POTION_HEAL]
-	if _player.potions <= 0:
-		potion_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-	else:
+	var parts: PackedStringArray = PackedStringArray()
+	for i in range(MinePlayer.POTION_INFO.size()):
+		parts.append("[%s]%s x%d" % [
+			String(MinePlayer.POTION_INFO[i]["key"]),
+			_player.potion_name(i),
+			_player.potion_count(i),
+		])
+	potion_label.text = "  ".join(parts) + "     [P] 技能表"
+	# 只要还有能用的药就保持亮色，全用光了变灰
+	var any_left: bool = false
+	for i in range(MinePlayer.POTION_INFO.size()):
+		if _player.potion_count(i) > 0:
+			any_left = true
+	if any_left:
 		potion_label.add_theme_color_override("font_color", Color(0.75, 1, 0.8))
+	else:
+		potion_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 
 ## P 键技能表：列出每个技能的按键、消耗、冷却和说明
 func _refresh_skill_list() -> void:
