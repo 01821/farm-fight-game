@@ -58,6 +58,8 @@ var total_watered: int = 0
 var ore: int = 0
 ## 累计加工出几件东西
 var total_crafted: int = 0
+## NPC 那边的进度标记（比如老铁收过礼没有）—— 他会根据这些换台词
+var npc_done: Dictionary = {}
 
 ## 背包：物品 id -> 数量
 var inventory: Dictionary = {}
@@ -384,6 +386,7 @@ func to_save_data() -> Dictionary:
 		"total_planted": total_planted, "total_watered": total_watered,
 		"inventory": inventory.duplicate(), "equipped": equipped.duplicate(),
 		"ore": ore, "total_crafted": total_crafted,
+		"npc_done": npc_done.duplicate(),
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -404,6 +407,11 @@ func apply_save_data(d: Dictionary) -> void:
 	total_watered = maxi(0, int(d.get("total_watered", 0)))
 	ore = maxi(0, int(d.get("ore", 0)))
 	total_crafted = maxi(0, int(d.get("total_crafted", 0)))
+	npc_done.clear()
+	var nd: Variant = d.get("npc_done", {})
+	if typeof(nd) == TYPE_DICTIONARY:
+		for k in (nd as Dictionary).keys():
+			npc_done[String(k)] = bool((nd as Dictionary)[k])
 	# 存档是权威：先清空再读，免得旧档里没有这两个字段时留着上一局的装备
 	inventory.clear()
 	var inv: Variant = d.get("inventory", {})

@@ -65,6 +65,17 @@ func select_seed(i: int) -> void:
 		print("[种子] 已经是 ", player.crop_name(), " 了")
 
 func use_held_item() -> bool:
+	# 老铁：站他旁边按 F 说句话。能交矿石就直接交。
+	# 放在矿洞口**之前**判断 —— 两个人的范围可能有重叠，
+	# 玩家站在老铁身边时应该先跟人说话，而不是被吸进洞里。
+	var npc := get_tree().get_first_node_in_group("npc") as Npc
+	if npc != null and npc.is_player_inside():
+		var dlg := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
+		if dlg != null:
+			dlg.talk_to(npc)
+			return true
+		npc.interact()
+		return true
 	# 矿洞口优先：站上去按 F 就下矿（和手持什么都无关）
 	if mine_entrance != null and mine_entrance.is_player_inside():
 		return mine_entrance.enter_mine()

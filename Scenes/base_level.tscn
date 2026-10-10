@@ -23,6 +23,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/buildings/mill.tscn" id="19_mill"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/pause_menu.tscn" id="20_pause"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/craft_panel.tscn" id="21_craft"]
+[ext_resource type="PackedScene" path="res://Scenes/Characters/npc.tscn" id="22_npc"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/dialogue_panel.tscn" id="23_dlg"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -1124,6 +1126,12 @@ script = ExtResource("11_fctl")
 [node name="PauseMenu" parent="." instance=ExtResource("20_pause")]
 
 [node name="CraftPanel" parent="." instance=ExtResource("21_craft")]
+
+[node name="DialoguePanel" parent="." instance=ExtResource("23_dlg")]
+
+; 老铁：站在矿洞口斜下方。放在农田范围（x 248~312 / y 136~184）之外。
+[node name="OldIron" parent="." instance=ExtResource("22_npc")]
+position = Vector2(320, 216)
 
 [node name="NightTint" type="CanvasModulate" parent="."]
 

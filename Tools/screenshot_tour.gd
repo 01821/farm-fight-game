@@ -85,6 +85,21 @@ func _shot_farm() -> void:
 		await _grab("craft_panel")
 		panel.set_open(false)
 		await _step(4)
+	# 老铁 + 对话框
+	var npc := _level.get_node_or_null("OldIron") as Npc
+	var dlg := _level.get_node_or_null("DialoguePanel") as DialoguePanel
+	if npc != null and dlg != null:
+		player.global_position = npc.global_position + Vector2(0, -26)
+		player.ore = 5
+		player.npc_done.clear()
+		await _step(SETTLE)
+		await _grab("npc_in_farm")
+		dlg.talk_to(npc)
+		await _step(SETTLE)
+		await _grab("npc_dialogue")
+		dlg.set_open(false)
+		await _step(4)
+
 	_level.queue_free()
 	await _step(6)
 

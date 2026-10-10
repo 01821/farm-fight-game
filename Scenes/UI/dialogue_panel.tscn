@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/dialogue_panel.gd" id="1_dlg"]
+
+; 对话框。整屏预建，脚本只刷文字和按钮状态。
+; ⚠️ 面板要**整屏** —— 窄框会让框外的 HUD 文字露出来，
+;    看着像 HUD 画到了面板上面（配方台踩过一次）。
+[node name="DialoguePanel" type="CanvasLayer"]
+layer = 92
+script = ExtResource("1_dlg")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.05, 0.08, 0.9)
+
+[node name="NameLabel" type="Label" parent="."]
+visible = false
+offset_left = 30.0
+offset_top = 96.0
+offset_right = 370.0
+offset_bottom = 118.0
+theme_override_colors/font_color = Color(1, 0.93, 0.62, 1)
+theme_override_font_sizes/font_size = 12
+text = "老铁"
+
+[node name="LineLabel" type="Label" parent="."]
+visible = false
+offset_left = 30.0
+offset_top = 126.0
+offset_right = 370.0
+offset_bottom = 186.0
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+text = "……"
+
+[node name="Buttons" type="Node" parent="."]
+
+[node name="TradeButton" type="Button" parent="Buttons"]
+visible = false
+offset_left = 50.0
+offset_top = 204.0
+offset_right = 350.0
+offset_bottom = 228.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+flat = true
+
+[node name="ByeButton" type="Button" parent="Buttons"]
+visible = false
+offset_left = 50.0
+offset_top = 236.0
+offset_right = 350.0
+offset_bottom = 260.0
+theme_override_colors/font_hover_color = Color(1, 0.8, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "[ESC] 再见"
+flat = true

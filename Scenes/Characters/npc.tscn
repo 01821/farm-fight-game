@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Characters/npc.gd" id="1_npc"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap-characters_packed.png" id="2_chars"]
+
+; ⚠️ sub_resource 必须写在**用到它的节点之前**，不然解析报错
+[sub_resource type="CircleShape2D" id="CircleShape2D_talk"]
+radius = 30.0
+
+; 老铁：站在矿洞口旁边的退休矿工。
+; 角色图集是 24×24 一格。玩家（矿洞里那个）用的是第 1 行第 0 格 (0,24)，
+; 这里用第 1 行第 1 格 (24,24) 跟他区分开。
+[node name="Npc" type="Node2D"]
+script = ExtResource("1_npc")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = ExtResource("2_chars")
+region_enabled = true
+region_rect = Rect2(24, 24, 24, 24)
+
+; collision_mask = 2 —— 玩家在物理层 2 上，不设这个就永远检测不到人
+[node name="TalkArea" type="Area2D" parent="."]
+collision_mask = 2
+monitorable = false
+
+[node name="Shape" type="CollisionShape2D" parent="TalkArea"]
+shape = SubResource("CircleShape2D_talk")
