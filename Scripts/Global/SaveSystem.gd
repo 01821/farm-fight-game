@@ -8,8 +8,14 @@ class_name SaveSystem extends Node
 
 const SAVE_VERSION: int = 2
 const DEFAULT_PATH: String = "user://farm_save.json"
+## 有几个存档槽
+const SLOT_COUNT: int = 3
+## 上一次用的槽，记在配置里，下次开机默认还用它
+const SLOT_CONFIG: String = "user://farm_slot.cfg"
 
 @export var save_path: String = DEFAULT_PATH
+## 当前槽号，1 起
+var current_slot: int = 1
 @export var auto_load: bool = true
 @export var auto_save_on_dawn: bool = true
 
@@ -23,7 +29,7 @@ var _booted: bool = false
 
 func _ready() -> void:
 	add_to_group("save_system")
-	add_to_group("save_system")
+	_read_slot_config()
 
 func _process(_delta: float) -> void:
 	if _booted:
@@ -47,6 +53,83 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func has_save() -> bool:
 	return FileAccess.file_exists(save_path)
+
+# --- 存档槽 ---
+
+## 第 slot 个槽的文件路径。slot <= 0 时退回老的单槽路径（兼容旧存档）。
+func slot_path(slot: int) -> String:
+	if slot <= 0:
+		return DEFAULT_PATH
+	return "user://farm_save_%d.json" % slot
+
+## 切到第 slot 个槽。**只改路径，不动文件** —— 切换之后要自己再决定存还是读。
+func set_slot(slot: int) -> bool:
+	if slot < 1 or slot > SLOT_COUNT:
+		return false
+	current_slot = slot
+	save_path = slot_path(slot)
+	_write_slot_config()
+	print("[存档] 切到第 ", slot, " 号存档槽")
+	return true
+
+func slot_exists(slot: int) -> bool:
+	return FileAccess.file_exists(slot_path(slot))
+
+## 读一个槽的摘要（**不真正载入**），给标题界面显示用。
+## 返回 {exists, day, money, ok}
+func slot_summary(slot: int) -> Dictionary:
+	var p: String = slot_path(slot)
+	if not FileAccess.file_exists(p):
+		return {"exists": false, "day": 0, "money": 0, "ok": false}
+	var f := FileAccess.open(p, FileAccess.READ)
+	if f == null:
+		return {"exists": true, "day": 0, "money": 0, "ok": false}
+	var text := f.get_as_text()
+	f.close()
+	var parsed: Variant = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {"exists": true, "day": 0, "money": 0, "ok": false}
+	var data: Dictionary = parsed
+	var ver: int = int(data.get("version", 0))
+	var dc: Dictionary = data.get("day_cycle", {})
+	var pl: Dictionary = data.get("player", {})
+	return {
+		"exists": true,
+		"day": int(dc.get("day", 1)),
+		"money": int(pl.get("money", 0)),
+		"ok": ver == SAVE_VERSION,
+	}
+
+## 删掉某个槽（不影响当前槽的话不用管 save_path）
+func delete_slot(slot: int) -> bool:
+	if not slot_exists(slot):
+		return false
+	var err := DirAccess.remove_absolute(slot_path(slot))
+	if err != OK:
+		push_error("删档失败：" + error_string(err))
+		return false
+	print("[存档] 第 ", slot, " 号槽已删除")
+	return true
+
+## 记住上次用的是哪个槽，下次开机默认还用它
+func _write_slot_config() -> void:
+	var f := FileAccess.open(SLOT_CONFIG, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(str(current_slot))
+	f.close()
+
+func _read_slot_config() -> void:
+	if not FileAccess.file_exists(SLOT_CONFIG):
+		return
+	var f := FileAccess.open(SLOT_CONFIG, FileAccess.READ)
+	if f == null:
+		return
+	var n: int = int(f.get_as_text().strip_edges())
+	f.close()
+	if n >= 1 and n <= SLOT_COUNT:
+		current_slot = n
+		save_path = slot_path(n)
 
 func save_game() -> bool:
 	if player == null or land == null or cycle == null or controller == null:
