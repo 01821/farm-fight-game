@@ -38,6 +38,18 @@ func _step(frames: int) -> void:
 func _products() -> Array:
 	return get_tree().get_nodes_in_group("animal_product")
 
+## 模拟"按一下某个动作键"。
+## 必须走 parse_input_event —— Input.action_press 只改状态，不会派发事件。
+func _tap_action(action: String) -> void:
+	var down := InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+
 func _ready() -> void:
 	_level = (load("res://Scenes/base_level.tscn") as PackedScene).instantiate()
 	add_child(_level)
@@ -359,6 +371,82 @@ func _ready() -> void:
 	_check("没钱的时候买不了", not _market.buy_upgrade(_player))
 	_check("没买成不扣钱（本来就是 0）", _player.money == 0)
 	_player.money = money_before
+
+	print("--- 统计面板（Y 键） ---")
+	var hud := _level.get_node_or_null("HUD")
+	_check("农场里有 HUD", hud != null)
+	if hud != null:
+		var backdrop := _level.get_node("HUD/StatBackdrop") as ColorRect
+		var body := _level.get_node("HUD/StatBody") as Label
+		_check("统计面板是预建节点", backdrop != null and body != null)
+
+		hud.stats_open = false
+		await _step(3)
+		_check("默认是收起的", not backdrop.visible and not body.visible)
+
+		# 按键开关
+		_check("Y 键绑上了 stats_toggle", InputMap.has_action("stats_toggle"))
+		# ⚠️ `Input.action_press()` **只改内部状态，不派发事件** ——
+		#    `_unhandled_input` 根本收不到。要真的投一个事件进输入系统，
+		#    得用 `Input.parse_input_event()`。（踩过：断言"按一下 Y 打开了"一直红。）
+		_tap_action("stats_toggle")
+		await _step(3)
+		_check("按一下 Y 打开了", hud.stats_open and backdrop.visible)
+		_tap_action("stats_toggle")
+		await _step(3)
+		_check("再按一下收起了", not hud.stats_open and not backdrop.visible)
+
+		# 塞进一些可辨认的数字，看它有没有如实显示
+		_player.total_earned = 1234
+		_player.total_harvested = 56
+		_player.total_kills = 7
+		_player.total_goods = 8
+		_player.total_processed = 90
+		MineRun.total_runs = 3
+		MineRun.total_mine_kills = 21
+		MineRun.total_boss = 2
+		MineRun.deepest = 3
+		MineRun.best_run_gold = 145
+		MineRun.flawless_runs = 1
+		hud.stats_open = true
+		await _step(3)
+		var txt: String = hud.stats_text()
+		print("  INFO 统计面板：")
+		for ln in txt.split("\n"):
+			print("        ", ln)
+		_check("有农场段", "农场" in txt)
+		_check("有矿洞段", "矿洞" in txt)
+		_check("显示了累计赚到的钱", "1234" in txt)
+		_check("显示了收获作物数", "56" in txt)
+		_check("显示了害兽数", "7" in txt)
+		_check("显示了畜产数", "8" in txt)
+		_check("显示了加工价值", "90" in txt)
+		_check("显示了矿洞趟数", "3 趟" in txt)
+		_check("显示了矿怪数", "21" in txt)
+		_check("显示了拆关底数", "2 台" in txt)
+		_check("显示了最深层次", "3 层" in txt)
+		_check("显示了单趟最佳", "145" in txt)
+		_check("显示了土地升级等级", "洒水器" in txt)
+		hud.stats_open = false
+		await _step(2)
+
+	print("--- 累计赚到的钱只增不减 ---")
+	_player.total_earned = 0
+	_player.money = 100
+	_player.earn(50)
+	_check("赚了就累加", _player.total_earned == 50 and _player.money == 150)
+	_player.money -= 120          # 花钱买东西
+	_check("花掉钱之后身上变少", _player.money == 30)
+	_check("但生涯累计不受影响", _player.total_earned == 50)
+	_player.earn(10)
+	_check("再赚继续累加", _player.total_earned == 60)
+
+	print("--- 累计赚到的钱要能存档 ---")
+	_player.total_earned = 4321
+	var ed: Dictionary = _player.to_save_data()
+	_player.total_earned = 0
+	_player.apply_save_data(ed)
+	_check("读档读回累计收入", _player.total_earned == 4321)
 
 	print("RESULT fail=", _fail)
 	get_tree().quit()

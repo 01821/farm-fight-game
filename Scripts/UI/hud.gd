@@ -16,6 +16,9 @@ extends CanvasLayer
 @onready var banner_backdrop: ColorRect = $BannerBackdrop
 @onready var toast: Label = $Toast
 @onready var toast_backdrop: ColorRect = $ToastBackdrop
+@onready var stat_backdrop: ColorRect = $StatBackdrop
+@onready var stat_title: Label = $StatTitle
+@onready var stat_body: Label = $StatBody
 @onready var perk_backdrop: ColorRect = $PerkBackdrop
 @onready var perk_title: Label = $PerkTitle
 @onready var perk_option1: Label = $PerkOption1
@@ -25,6 +28,51 @@ extends CanvasLayer
 @onready var controller: FarmController = $"../FarmController"
 @onready var weather: Weather = get_node_or_null("../Weather") as Weather
 @onready var achievements: Achievements = get_node_or_null("../Achievements") as Achievements
+
+## Y 键生涯统计面板。
+## 数据全部来自**已有的生涯计数**，没有为了这个面板另开一套统计 ——
+## 玩家经历过的每一件事本来就被记着，这只是把它们摊开给他看。
+var stats_open: bool = false
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("stats_toggle"):
+		stats_open = not stats_open
+		get_viewport().set_input_as_handled()
+
+func _update_stats_panel() -> void:
+	stat_backdrop.visible = stats_open
+	stat_title.visible = stats_open
+	stat_body.visible = stats_open
+	if not stats_open:
+		return
+	var lines: PackedStringArray = PackedStringArray()
+	lines.append("—— 农场 ——")
+	lines.append("玩了 %d 天" % cycle.day)
+	lines.append("累计赚到 %d 金（身上 %d）" % [player.total_earned, player.money])
+	lines.append("收获作物 %d 个" % player.total_harvested)
+	lines.append("赶跑害兽 %d 只" % player.total_kills)
+	lines.append("收畜产 %d 个" % player.total_goods)
+	lines.append("加工价值 %d 金" % player.total_processed)
+	lines.append("")
+	lines.append("—— 矿洞 ——")
+	lines.append("下矿 %d 趟" % MineRun.total_runs)
+	lines.append("赶跑矿怪 %d 只" % MineRun.total_mine_kills)
+	lines.append("拆掉关底 %d 台" % MineRun.total_boss)
+	lines.append("到过最深第 %d 层" % MineRun.deepest)
+	lines.append("单趟最多带回 %d 金" % MineRun.best_run_gold)
+	lines.append("一命通关 %d 次" % MineRun.flawless_runs)
+	lines.append("")
+	var lv: String = ""
+	for i in range(Upgrades.INFO.size()):
+		if i > 0:
+			lv += "  "
+		lv += "%s%d" % [Upgrades.name_of(i), Upgrades.level_of(i)]
+	lines.append("土地升级 " + lv)
+	stat_body.text = "\n".join(lines)
+
+## 统计面板当前正文（测试直接读）
+func stats_text() -> String:
+	return stat_body.text
 
 func _process(_delta: float) -> void:
 	# 所有浮层节点都是预建的，这里只切可见性和文本
@@ -39,6 +87,7 @@ func _process(_delta: float) -> void:
 		toast.text = achievements.toast_text()
 
 	_update_perk_panel()
+	_update_stats_panel()
 
 	var phase := "%s %d 秒" % [cycle.phase_name(), ceili(cycle.phase_time_left())]
 	var sky: String = weather.sky_name() if weather != null else "晴天"
@@ -60,7 +109,7 @@ func _process(_delta: float) -> void:
 		Progression.level_of(Progression.Skill.COMBAT),
 		Progression.level_of(Progression.Skill.TRADE)
 	]
-	key_label.text = "[1-5]选作物 [Q]切换 [F]使用 [F5]存 [F9]读"
+	key_label.text = "[1-5]选作物 [Q]切换 [F]使用 [F5]存 [F9]读 [Y]统计"
 
 ## 升级二选一面板。注意：面板亮着的时候 1 / 2 是「选专精」，
 ## 路由在 FarmController._unhandled_input 里。

@@ -47,6 +47,8 @@ var total_goods: int = 0
 var processed_value: int = 0
 ## 累计加工出来的总价值（统计用）
 var total_processed: int = 0
+## 生涯累计赚到的钱（**只增不减**，统计面板用；money 会因为买东西变少）
+var total_earned: int = 0
 
 ## 当前重叠的水源数量（站在水源旁自动补水）
 var _water_source_count: int = 0
@@ -211,7 +213,9 @@ func register_kill() -> void:
 
 ## 进账（卖作物、击杀赏金等）。目标判定由 FarmController 每帧读 money，这里不用通知谁。
 func earn(amount: int) -> void:
-	money += maxi(0, amount)
+	var got: int = maxi(0, amount)
+	money += got
+	total_earned += got
 
 # --- 水 ---
 
@@ -277,6 +281,7 @@ func to_save_data() -> Dictionary:
 		"total_harvested": total_harvested, "total_kills": total_kills,
 		"animal_goods": animal_goods, "total_goods": total_goods,
 		"processed_value": processed_value, "total_processed": total_processed,
+		"total_earned": total_earned,
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -292,6 +297,7 @@ func apply_save_data(d: Dictionary) -> void:
 	total_goods = maxi(0, int(d.get("total_goods", 0)))
 	processed_value = maxi(0, int(d.get("processed_value", 0)))
 	total_processed = maxi(0, int(d.get("total_processed", 0)))
+	total_earned = maxi(0, int(d.get("total_earned", 0)))
 	_read_counts(d.get("seeds", null), seeds)
 	_read_counts(d.get("harvested", null), harvested)
 	global_position = Vector2(
