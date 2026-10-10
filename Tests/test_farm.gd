@@ -82,7 +82,11 @@ func _ready() -> void:
 	_player.cycle_item()
 	_check("再切一次 -> 剑", _player.active_item == Player.Item.SWORD)
 	_player.cycle_item()
-	_check("切四下回到种子", _player.active_item == Player.Item.SEED)
+	_check("再切一次 -> 工具箱", _player.active_item == Player.Item.TOOLBOX)
+	_player.cycle_item()
+	# 按道具总数循环，而不是写死"四下" ——
+	# 加一个道具（工具箱）就会让写死的次数失效，这种断言太脆了
+	_check("切满一圈回到种子", _player.active_item == Player.Item.SEED)
 
 	print("--- 找耕地 ---")
 	var farm_tiles: Array[Vector2i] = []
