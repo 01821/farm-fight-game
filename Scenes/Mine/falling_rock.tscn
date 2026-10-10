@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Mine/falling_rock.gd" id="1_rock"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap_packed.png" id="2_tiles"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rock"]
+size = Vector2(16, 16)
+
+; 石头用地形图集里那块纯土（4,0），不掉下来的时候就挂在天花板下面。
+[node name="FallingRock" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_rock")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tiles")
+region_enabled = true
+region_rect = Rect2(72, 0, 18, 18)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_rock")

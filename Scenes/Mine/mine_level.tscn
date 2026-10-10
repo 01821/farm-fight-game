@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/Mine/mine_boss.tscn" id="8_boss"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/mine_cart.tscn" id="9_cart"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/descend_point.tscn" id="10_desc"]
+[ext_resource type="PackedScene" path="res://Scenes/Mine/spike_trap.tscn" id="11_spike"]
+[ext_resource type="PackedScene" path="res://Scenes/Mine/falling_rock.tscn" id="12_rock"]
 
 ; ⚠️ 两个必须对齐的东西，错一个都不会报错、只会手感不对：
 ;    1) TileSet.tile_size **必须**和 texture_region_size 一样是 18×18。
@@ -122,6 +124,20 @@ position = Vector2(790, 198)
 ; 必须先拆掉关底才能下去（require_boss）。
 [node name="DescendPoint" parent="." instance=ExtResource("10_desc")]
 position = Vector2(845, 191)
+
+; 陷阱。地刺摆在地面上（尖朝上，所以放在 y=198），落石挂在高处。
+; 位置刻意留了空隙 —— 地刺不是密铺的墙，玩家能跳过去。
+[node name="SpikeA" parent="." instance=ExtResource("11_spike")]
+position = Vector2(205, 198)
+
+[node name="SpikeB" parent="." instance=ExtResource("11_spike")]
+position = Vector2(520, 198)
+
+[node name="RockA" parent="." instance=ExtResource("12_rock")]
+position = Vector2(340, 120)
+
+[node name="RockB" parent="." instance=ExtResource("12_rock")]
+position = Vector2(640, 120)
 
 ; 矿车。碰撞盒 30×14，放在 y=191 时顶面正好是 184（地面顶面 198），
 ; 也就是"坐"在地面上，玩家走上去只高 14px，一步就能踩上。

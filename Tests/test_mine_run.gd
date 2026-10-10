@@ -273,6 +273,72 @@ func _ready() -> void:
 	print("  INFO ", layer_txt)
 	_check("HUD 上写着当前层数", "层" in layer_txt)
 
+	print("--- 陷阱：地刺与落石 ---")
+	var spikes: Array[SpikeTrap] = []
+	var rocks: Array[FallingRock] = []
+	for n in get_tree().get_nodes_in_group("mine_hazard"):
+		if n is SpikeTrap:
+			spikes.append(n as SpikeTrap)
+		elif n is FallingRock:
+			rocks.append(n as FallingRock)
+	print("  INFO 关卡里有 ", spikes.size(), " 处地刺、", rocks.size(), " 块落石")
+	_check("摆了地刺", spikes.size() >= 1)
+	_check("摆了落石", rocks.size() >= 1)
+
+	# ★ 第 1 层是干净的新手层
+	MineRun.depth = 1
+	_level._apply_hazard_depth()
+	await _step(2)
+	_check("第 1 层时陷阱是关掉的", not spikes[0].visible and not spikes[0].monitoring)
+	_check("第 1 层时落石也是关的", not rocks[0].visible and not rocks[0].monitoring)
+
+	MineRun.depth = 2
+	_level._apply_hazard_depth()
+	await _step(2)
+	_check("第 2 层陷阱开启", spikes[0].visible and spikes[0].monitoring)
+	_check("第 2 层落石开启", rocks[0].visible and rocks[0].monitoring)
+
+	# 踩到地刺要掉血
+	var spike := spikes[0]
+	_player.hp = MinePlayer.MAX_HP
+	_player.global_position = Vector2(2000, -400)   # 先挪开，把无敌帧耗掉
+	await _step(int(MinePlayer.INVULN_TIME * 60) + 8)
+	_player.global_position = spike.global_position + Vector2(0.5, -2)
+	_player.velocity = Vector2.ZERO
+	await _step(6)
+	print("  INFO 踩地刺后血量 ", _player.hp, "/", MinePlayer.MAX_HP)
+	_check("踩到地刺会掉血", _player.hp < MinePlayer.MAX_HP)
+
+	# 站着不动要**持续**疼，不是只扎一下就走
+	var hp_stay: int = _player.hp
+	await _step(int(MinePlayer.INVULN_TIME * 60) + 10)
+	print("  INFO 在刺上站了一会儿，血量 ", hp_stay, " → ", _player.hp)
+	_check("站着不动会持续掉血", _player.hp < hp_stay)
+
+	# 落石：走到下面才会掉，而且**先抖一下预警**
+	var rock := rocks[0]
+	_player.global_position = Vector2(2000, -400)
+	await _step(int(MinePlayer.INVULN_TIME * 60) + 8)
+	_check("落石一开始是挂着的", rock.state_name() == "挂着")
+	# 站到它正下方
+	_player.global_position = Vector2(rock.global_position.x, rock.ground_y)
+	await _step(3)
+	print("  INFO 走到落石下面后：", rock.state_name())
+	_check("走到下面会触发（先进预警）", rock.state_name() == "预警" or rock.state_name() == "下落")
+	# 预警那零点几秒里它还不该有伤害 —— 这就是"看得见的预兆"
+	await _step(int(FallingRock.SHAKE_TIME * 60) + 6)
+	print("  INFO 预警结束后：", rock.state_name(), "，y=", snappedf(rock.global_position.y, 0.1))
+	_check("预警之后才真的往下掉", rock.state_name() == "下落" or rock.state_name() == "碎了")
+	await _step(90)
+	print("  INFO 最后：", rock.state_name(), "，y=", snappedf(rock.global_position.y, 0.1))
+	_check("掉到地面会碎", rock.state_name() == "碎了")
+	_check("碎了就停在落地高度", is_equal_approx(rock.global_position.y, rock.ground_y))
+	_check("碎了之后不再有判定", not rock.monitoring)
+
+	MineRun.depth = 1
+	_level._apply_hazard_depth()
+	_player.hp = MinePlayer.MAX_HP
+
 	print("--- 农场那边的矿洞口 ---")
 	# 前面开着的那趟要先收掉，否则"不该误启动一趟"这条会被自己前面的状态干扰
 	MineRun.active = false

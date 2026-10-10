@@ -1,0 +1,32 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Mine/spike_trap.gd" id="1_spike"]
+
+; 判定盒比视觉略窄一点 —— 让玩家觉得"擦边过去了"，比"明明没碰到却掉血"舒服得多
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_spike"]
+size = Vector2(28, 8)
+
+; 三根尖刺。颜色对着图集里的深色石块取的。
+[node name="SpikeTrap" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_spike")
+
+[node name="Spikes" type="Polygon2D" parent="."]
+position = Vector2(-14, 0)
+color = Color(0.42, 0.4, 0.46, 1)
+polygon = PackedVector2Array(0, 0, 4.5, -10, 9, 0, 10, 0, 14.5, -10, 19, 0, 20, 0, 24.5, -10, 29, 0)
+
+[node name="SpikesShine" type="Polygon2D" parent="."]
+position = Vector2(-14, 0)
+color = Color(0.72, 0.72, 0.8, 1)
+polygon = PackedVector2Array(4, -1, 4.5, -9, 5, -1, 14, -1, 14.5, -9, 15, -1, 24, -1, 24.5, -9, 25, -1)
+
+[node name="Base" type="Polygon2D" parent="."]
+position = Vector2(-14, 0)
+color = Color(0.26, 0.24, 0.3, 1)
+polygon = PackedVector2Array(0, 0, 29, 0, 29, 3, 0, 3)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0.5, -3)
+shape = SubResource("RectangleShape2D_spike")

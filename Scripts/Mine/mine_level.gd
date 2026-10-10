@@ -97,6 +97,7 @@ func _ready() -> void:
 	build()
 	_hook_player()
 	_scale_enemies_by_depth()
+	_apply_hazard_depth()
 	# ⚠️ 这里**不要**自动 MineRun.start_run()。
 	#    踩过的坑：自动开局之后，测试里玩家一死就会触发 MineRun.finish()，
 	#    而 finish() 会真的 change_scene_to_file —— 测试场景当场被换掉，
@@ -104,6 +105,28 @@ func _ready() -> void:
 	#    现在只有真的从矿洞口进来（MineRun.active 已经是 true）才有火把倒计时。
 	if MineRun.active:
 		print("[矿洞] 第 ", MineRun.depth, " 层，火把 ", int(MineRun.torch_left), " 秒")
+
+## 陷阱只在**第 2 层及以下**生效，第 1 层是干净的新手层。
+##
+## 这条一石二鸟：玩法上是"越深越凶"的递进（第 1 层教你打怪、认路），
+## 工程上顺带把陷阱和"只关心移动/战斗的老测试"隔离开了 ——
+## 之前往共享关卡里加东西，把不相关的测试打红过两次。
+func _apply_hazard_depth() -> void:
+	var on: bool = MineRun.depth >= 2
+	var n_haz: int = 0
+	for n in get_tree().get_nodes_in_group("mine_hazard"):
+		var h := n as Node2D
+		if h == null:
+			continue
+		n_haz += 1
+		h.visible = on
+		# 关掉整个处理 —— 只把 visible 设 false 的话，地刺照样会扎人
+		h.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+		var a := h as Area2D
+		if a != null:
+			a.monitoring = on
+	if n_haz > 0:
+		print("[矿洞] 第 ", MineRun.depth, " 层：陷阱 ", "开启" if on else "关闭", "（", n_haz, " 处）")
 
 ## 越深怪越强。血量和伤害一起涨 —— 只涨血的话，玩家会觉得"变肉了"而不是"变难了"。
 func _scale_enemies_by_depth() -> void:
