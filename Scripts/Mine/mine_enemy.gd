@@ -85,6 +85,30 @@ func _ready() -> void:
 func is_boss() -> bool:
 	return false
 
+## 金色精英：血三倍、个头大一圈、闪金光、**必掉好东西**。
+## 由关卡在布置时随机点几只上去 —— 玩家不知道这一趟会不会撞上，
+## 这正是"惊喜"的来源。矿洞原来是完全可预测的：每只怪掉什么都能算出来。
+var is_elite: bool = false
+const ELITE_HP_MULT: float = 3.0
+const ELITE_TINT: Color = Color(1.7, 1.35, 0.45)
+
+## 点成精英。已经点过、或者是 Boss 就直接返回（Boss 有自己的二阶段）。
+func make_elite() -> void:
+	if is_elite or is_boss():
+		return
+	is_elite = true
+	max_hp = maxi(2, int(round(float(max_hp) * ELITE_HP_MULT)))
+	hp = max_hp
+	_title = "金色" + _title
+	_damage = _damage + 1
+	sprite.modulate = ELITE_TINT
+	sprite.scale = Vector2(1.3, 1.3)
+
+## 平时该显示什么颜色（精英是金的）。闪白结束之后要**回到这个色**，
+## 不然精英被砍一下就永远变成白的了。
+func _base_tint() -> Color:
+	return ELITE_TINT if is_elite else Color.WHITE
+
 func _apply_kind() -> void:
 	var k: int = clampi(kind, 0, KINDS.size() - 1)
 	var d: Dictionary = KINDS[k]
@@ -215,7 +239,7 @@ func _update_flash(delta: float) -> void:
 	if _flash <= 0.0:
 		return
 	_flash = maxf(0.0, _flash - delta)
-	sprite.modulate = FLASH_TINT if _flash > 0.0 else Color.WHITE
+	sprite.modulate = FLASH_TINT if _flash > 0.0 else _base_tint()
 
 ## amount = 伤害；from = 攻击者位置（决定往哪边飞，给 Vector2.INF 就不击退）
 ## knock = 击退强度，不同武器/技能给的不一样（巨剑推得比短剑远）

@@ -47,6 +47,8 @@ func _flat_map() -> PackedStringArray:
 
 func _ready() -> void:
 	_level = (load("res://Scenes/Mine/mine_level.tscn") as PackedScene).instantiate()
+	# 关掉金色精英：它会给怪改名字和血量，这一套测试要断言的就是那些具体数值
+	_level.elites_enabled = false
 	add_child(_level)
 	await _step(2)
 	_level.build()

@@ -49,19 +49,39 @@ func open() -> int:
 	for i in range(ore_count):
 		if _spawn(MinePickup.Kind.ORE, i, ore_count):
 			n += 1
+	# 小概率开出一件**遗物**（装备）—— 宝箱从此不只是"多几个金币"。
+	# 概率刻意压低：随手开的箱子给惊喜才叫惊喜，天天给就不值钱了。
+	if randf() < 0.15:
+		var pick: String = _pick_relic()
+		if pick != "" and _spawn(MinePickup.Kind.RELIC, 0, 1, pick):
+			n += 1
+			print("[矿洞] ★★ 宝箱里开出了遗物：", ItemData.name_of(pick))
 	print("[矿洞] 开宝箱，掉出 ", n, " 份东西")
 	return n
 
+## 挑一件玩家还没有的装备。都有了就返回空串（改掉宝石也行，但这里就简单点）。
+func _pick_relic() -> String:
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	var pool: Array[String] = []
+	for id in ["leather_vest", "lucky_charm", "iron_plate", "heart_pendant", "iron_sword"]:
+		if farm == null or not farm.has_item(id):
+			pool.append(id)
+	if pool.is_empty():
+		return ""
+	return pool[randi() % pool.size()]
+
 ## 把掉落物往两边撒开，免得全叠在一个点上
-func _spawn(kind: int, index: int, total: int) -> bool:
+func _spawn(kind: int, index: int, total: int, item_id: String = "") -> bool:
 	if pickup_scene == null:
 		return false
 	var p := pickup_scene.instantiate() as MinePickup
 	if p == null:
 		return false
 	var spread: float = float(index) - float(total - 1) * 0.5
-	# kind / pop_velocity 必须在 add_child **之前**设好 —— _ready 会拿它们初始化
+	# kind / pop_velocity / item_id 必须在 add_child **之前**设好 ——
+	# _ready 会拿它们初始化
 	p.kind = kind
+	p.item_id = item_id
 	p.pop_velocity = Vector2(spread * 30.0, -110.0 - absf(spread) * 10.0)
 	get_parent().add_child(p)
 	p.global_position = global_position + Vector2(0, -6)

@@ -184,10 +184,36 @@ func _on_enemy_died(enemy: MineEnemy) -> void:
 		return
 	var from: Vector2 = enemy.global_position + Vector2(0, -12)
 	_spawn_drop(MinePickup.Kind.COIN, 1 + enemy.max_hp, from)
-	# 25% 概率额外掉一块矿石 —— 稀有才值得高兴
+	if enemy.is_elite:
+		# 精英**必掉**好东西 —— 打它是有回报的，不是白费力气
+		_spawn_drop(MinePickup.Kind.GEM, -1, from)
+		if randf() < 0.5:
+			_spawn_relic(from)
+		print("[矿洞] ★ 金色", enemy.display_name(), " 掉了宝石")
+		return
+	# 普通怪：25% 掉矿石，再小概率掉一颗宝石 ——
+	# 稀有才值得高兴，所以概率压得很低（3%）
 	if randf() < 0.25:
 		_spawn_drop(MinePickup.Kind.ORE, -1, from)
 		print("[矿洞] ", enemy.display_name(), " 还掉了一块矿石！")
+	elif randf() < 0.03:
+		_spawn_drop(MinePickup.Kind.GEM, -1, from)
+		print("[矿洞] ★ ", enemy.display_name(), " 居然掉了颗宝石！")
+
+## 掉一件"遗物"——它带的是**装备**，不是钱。
+## 从还没拿到过的装备里挑一件，挑不到就改掉宝石（不至于空手）。
+func _spawn_relic(from: Vector2) -> void:
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	var pool: Array[String] = []
+	for id in ["leather_vest", "lucky_charm", "iron_plate", "heart_pendant"]:
+		if farm == null or not farm.has_item(id):
+			pool.append(id)
+	if pool.is_empty():
+		_spawn_drop(MinePickup.Kind.GEM, -1, from)
+		return
+	var pick: String = pool[randi() % pool.size()]
+	_spawn_drop(MinePickup.Kind.RELIC, -1, from, pick)
+	print("[矿洞] ★★ 掉了遗物：", ItemData.name_of(pick))
 
 ## 关底 Boss 的**独特掉落**。
 ## 为什么要这个：原来是"打完给 30 金"，太薄 —— 玩家拆完一台大机械，
@@ -226,19 +252,46 @@ func _on_boss_died(boss: MineEnemy) -> void:
 		_spawn_drop(MinePickup.Kind.ORE, -1, origin + Vector2(off2 * 24.0, 8.0))
 	Sfx.play("goal")
 
-func _spawn_drop(kind: int, value: int, at: Vector2) -> MinePickup:
+func _spawn_drop(kind: int, value: int, at: Vector2, item_id: String = "") -> MinePickup:
 	if pickup_scene == null:
 		return null
 	var drop := pickup_scene.instantiate() as MinePickup
 	if drop == null:
 		return null
-	# kind / amount 要在 add_child **之前**设好 —— _ready 会拿它们初始化贴图和数值
+	# kind / amount / item_id 要在 add_child **之前**设好 ——
+	# _ready 会拿它们初始化贴图和数值
 	drop.kind = kind
 	drop.amount = value
+	drop.item_id = item_id
 	add_child(drop)
 	drop.global_position = at
 	drop.mark_spawn()
 	return drop
+
+## 随机把几只普通怪点成金色精英。
+## ⚠️ 用**这一趟的层数**当种子来源之一，但刻意加一点真随机 ——
+##    地图（带种子、可复现）和"这趟有没有精英"（不可预测）是两回事：
+##    地图要稳定，惊喜要不稳定。
+func _mark_elites() -> int:
+	var pool: Array[MineEnemy] = []
+	for n in get_tree().get_nodes_in_group("mine_enemy"):
+		var e := n as MineEnemy
+		if e != null and not e.is_boss() and is_instance_valid(e):
+			pool.append(e)
+	if pool.is_empty():
+		return 0
+	# 越深越多：第 1 层最多 1 只，第 3 层最多 3 只
+	var want: int = clampi(MineRun.depth, 1, 3)
+	pool.shuffle()
+	var made: int = 0
+	for e in pool:
+		if made >= want:
+			break
+		e.make_elite()
+		made += 1
+	if made > 0:
+		print("[矿洞] 这一层有 ", made, " 只金色精英")
+	return made
 
 ## 这一趟结束：在洞里倒下就是失败，丢掉这趟收获
 func _on_player_died() -> void:
@@ -248,6 +301,12 @@ func _on_player_died() -> void:
 func _process(delta: float) -> void:
 	_hook_player()
 	_hook_enemies()
+	if not _elites_marked:
+		# 等一帧让所有怪的 _ready 跑完（_apply_kind 会把 max_hp 定下来），
+		# 再点精英 —— 少这一帧的话倍血会乘在默认值上，白点。
+		_elites_marked = true
+		if elites_enabled:
+			_mark_elites()
 	if not MineRun.active:
 		return
 	MineRun.torch_left = maxf(0.0, MineRun.torch_left - delta)
@@ -263,6 +322,17 @@ func torch_ratio() -> float:
 
 ## 用**程序化生成**的地图（关掉就退回下面手写的那几张，方便对照调试）
 @export var use_generated_map: bool = true
+
+## 精英只点一次（_process 里靠它去重）
+var _elites_marked: bool = false
+
+## 要不要随机点金色精英。
+## ⚠️ 这个开关是**被测试逼出来的**：精英会给怪改名字（前面加「金色」）和血量，
+##    而"选谁是精英"是随机的 —— 于是 test_mine_combat / test_mine_enemy 里
+##    那些"默认种类 3 血""名字是尖刺球"的断言会**间歇性**变红，
+##    而且看起来跟精英系统毫无关系。凡是要断言怪的具体数值的测试，
+##    都应该先把这一项关掉。
+@export var elites_enabled: bool = true
 
 ## 当前实际用的地图，优先级：
 ##   1. 显式设过 `map`（测试用自定义小地图时走这条）

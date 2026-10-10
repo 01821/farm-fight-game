@@ -45,6 +45,8 @@ var entry_day: int = 0
 var entry_slot: int = 1
 ## 这趟拆到的那件独特装备 id（给结算提示用，没拆到就是空串）
 var pending_unique: String = ""
+## 这趟在洞里捡到的装备 id 列表（遗物）。活着回去才到手。
+var pending_items: Array[String] = []
 ## 每日首通关底的额外奖励
 const DAILY_FIRST_GOLD: int = 30
 
@@ -75,6 +77,8 @@ func start_run() -> void:
 	boss_down = false
 	kills = 0
 	died_this_run = false
+	pending_items.clear()
+	pending_unique = ""
 	torch_left = TORCH_TIME
 	# 生涯累计在这里加，其余的重置
 	total_runs += 1
@@ -126,6 +130,13 @@ func add_kill() -> void:
 	kills += 1
 	total_mine_kills += 1
 
+## 在洞里捡到的**装备**（遗物）。和金币一样，**活着回去才真的到手** ——
+## 在洞里倒下的话，它们跟着一起丢。这是"下矿有风险"这条线上最贵的东西。
+func add_item(id: String) -> void:
+	if id == "" or pending_items.has(id):
+		return
+	pending_items.append(id)
+
 ## 在洞里倒下了。除了结束这趟，还要记下来 ——「一命通关」成就要看它。
 func mark_died() -> void:
 	died_this_run = true
@@ -143,10 +154,14 @@ func finish(success: bool) -> void:
 	if success and boss_down and not died_this_run:
 		flawless_runs += 1
 	_pending = {"success": success, "gold": gold, "kills": kills, "ore": ore, "boss_down": boss_down,
-		"depth": depth, "flawless": boss_down and not died_this_run and success}
+		"depth": depth, "flawless": boss_down and not died_this_run and success,
+		"items": pending_items.duplicate() if success else []}
 	print("[矿洞] 出洞 - ", "带回" if success else "丢掉",
 		"这趟收获：", gold, " 金 / ", ore, " 块矿石，赶跑 ", kills, " 只",
 		"，关底", "已拆" if boss_down else "没拆")
+	if success and pending_items.size() > 0:
+		for id in pending_items:
+			print("[矿洞] 带回遗物：", ItemData.name_of(id))
 	run_finished.emit(success, gold, kills)
 	if scene_switch_enabled:
 		get_tree().change_scene_to_file(FARM_SCENE)

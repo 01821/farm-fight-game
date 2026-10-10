@@ -52,6 +52,13 @@ func _settle_previous_run() -> void:
 		if ore > 0:
 			player.ore += ore
 			print("[矿洞] 矿石入袋：", player.ore, " 块")
+		# 遗物：在洞里捡到的装备。**只有活着回来才到手**
+		# （finish(false) 的时候这批是空的，所以这里不用再判一次）。
+		for id_v in r.get("items", []):
+			var id: String = String(id_v)
+			if ItemData.exists(id):
+				player.add_item(id, 1)
+				print("[矿洞] 遗物到手：", ItemData.name_of(id))
 		# 每日首通：今天第一次拆掉关底，额外再给一笔
 		var bonus: int = MineRun.claim_daily()
 		if bonus > 0:

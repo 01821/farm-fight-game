@@ -147,7 +147,17 @@ func _ready() -> void:
 	_check("失败时不带回金币（结算里 gold 仅供参考）", int(r3.get("gold")) == 50)
 
 	print("--- 矿石 ---")
-	_check("掉落物有 2 种（金币 / 矿石）", MinePickup.KINDS.size() == 2)
+	# ⚠️ 别写死种类数 —— 加掉落种类时这条会变红，而它想验的其实是
+	#    "金币和矿石都在表里"。改成按名字查。（硬编码计数过期，踩过好几次了）
+	var names: Array[String] = []
+	for d in MinePickup.KINDS:
+		names.append(String(d.get("name", "")))
+	print("  INFO 掉落物种类：", ", ".join(names))
+	_check("掉落物表里有金币", names.has("金币"))
+	_check("掉落物表里有矿石", names.has("矿石"))
+	_check("★ 还有更稀有的东西（宝石 / 遗物）", names.has("宝石") and names.has("遗物"))
+	_check("每种掉落都有贴图格子",
+		MinePickup.KINDS.all(func(d): return (d.get("cell", null)) != null))
 	var coin_v: int = int(MinePickup.KINDS[0]["value"])
 	var ore_v: int = int(MinePickup.KINDS[1]["value"])
 	print("  INFO 金币值 ", coin_v, "，矿石值 ", ore_v)
@@ -190,7 +200,11 @@ func _ready() -> void:
 		await _step(2)
 		var lying_after: int = get_tree().get_nodes_in_group("mine_pickup").size()
 		print("  INFO 走开再开箱：spawned=", spawned, "，地上 ", lying_before, " → ", lying_after)
-		_check("开箱掉出的份数 = 金币 + 矿石", spawned == chest2.coin_count + chest2.ore_count)
+		# ⚠️ 宝箱现在有小概率**额外**开出一件遗物，所以份数是"至少 金币+矿石"。
+		#    别写死等号 —— 那条会在 15% 的时候随机变红。
+		var base_parts: int = chest2.coin_count + chest2.ore_count
+		_check("开箱至少掉出 金币+矿石 那么多份",
+			spawned >= base_parts and spawned <= base_parts + 1)
 		_check("这些掉落确实留在了地上", lying_after == lying_before + spawned)
 
 		# 把玩家挪到每一份掉落上，全捡掉（掉落可能已被捡走，所以要判有效性再转类型）

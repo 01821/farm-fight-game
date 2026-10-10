@@ -504,12 +504,14 @@ func _ready() -> void:
 
 	# 第 2 环没做完，第 3 环的达成条件满足了也不该跳
 	_player.total_harvested = 99
-	await _step(3)
+	# ⚠️ 只等**一帧**。Guide 是"一帧最多推一环"，等 3 帧的话
+	#    water_1 和 harvest_1 可能连着推完，下面这条断言就偶发变红。
+	await get_tree().physics_frame
 	_check("★ 上一环没做完，后面的不会跳着完成", not Guide.has("harvest_1"))
 	_check("仍然卡在第 2 环", "浇" in Guide.current_text())
 
 	_player.total_watered = 1
-	await _step(3)
+	await get_tree().physics_frame
 	_check("浇了水就过第 2 环", Guide.has("water_1"))
 	_check("并且立刻推进到第 3 环", "收获" in Guide.current_text())
 	await _step(3)
