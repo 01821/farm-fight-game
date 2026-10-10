@@ -37,12 +37,16 @@ monitorable = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackBox"]
 shape = SubResource("RectangleShape2D_atk")
 
+; 挥砍特效：一道细月牙。
+; ⚠️ 原来这里是 24×38 的**大月牙、纯白 0.8 不透明** —— 对 24×24 的角色来说
+;    等于整个人被裹进一团白雾里，看不出是在挥剑（robot 拍的胶片里一眼就能看见）。
+;    改小、改细、降透明度，让它像"一道光扫过去"而不是"一堆白色"。
 [node name="Slash" type="Polygon2D" parent="."]
 visible = false
 z_index = 1
-position = Vector2(10, -12)
-color = Color(1, 1, 1, 0.8)
-polygon = PackedVector2Array(0, -16, 7, -11, 11, -4, 12, 4, 11, 12, 7, 18, 0, 22, -2, 13, -4, 6, -5, 0, -4, -6, -2, -13)
+position = Vector2(9, -11)
+color = Color(1, 1, 0.9, 0.55)
+polygon = PackedVector2Array(1, -13, 6, -6, 9, 0, 8, 7, 4, 12, 2, 11, 5, 5, 6, 0, 3, -6)
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, -10)

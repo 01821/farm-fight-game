@@ -71,26 +71,40 @@ layer = -10
 
 [node name="FarLayer" type="ParallaxLayer" parent="Parallax"]
 motion_scale = Vector2(0.1, 0.25)
-motion_mirroring = Vector2(72, 0)
+motion_mirroring = Vector2(432, 0)
 
+; ⚠️ 背景这块踩了四轮，结论写在这儿：
+;    ① `motion_mirroring` 的周期**不是屏幕空间**的。这一层 motion_scale.x = 0.1，
+;       写 72 时屏幕上只看得见一块、右边全黑（周期被放大到远远超过屏幕宽）。
+;       我按"周期 ÷ motion_scale"折算成 2.4 / 7.68 去试，也不对 ——
+;       还是只出现几条独立的带子。**这个属性怎么算我到现在也没搞明白**，
+;       所以最后**不依赖它了**。
+;    ② 改"把图拉宽硬盖住屏幕"之后盖是盖住了，但出现了大色块拼贴。
+;       根因**不是几何、是颜色**：Far 是紫调 (0.32,0.27,0.36)、
+;       Near 是暖调 (0.52,0.42,0.44)，两层叠在一起时各自的矩形边界因为颜色不同才显形。
+;    ③ 最终做法：**两层调成同一个色**，再把图放大到绝对盖满（72 × 20 = 1440px
+;       远大于屏幕 400px + 视差偏移），边界就落在屏幕外了。
+;       视差本身照样在 —— 两层竖向比例不同（4.2 vs 3.4），
+;       后层的山尖会从前层的山影后面露出来，这就是深度。
 [node name="Far" type="Sprite2D" parent="Parallax/FarLayer"]
-modulate = Color(0.32, 0.27, 0.36, 1)
+modulate = Color(0.3, 0.25, 0.28, 1)
 position = Vector2(0, 150)
-scale = Vector2(1, 4.2)
+scale = Vector2(20, 4.2)
 texture = ExtResource("14_bg")
 region_enabled = true
 region_rect = Rect2(72, 0, 72, 72)
 
 [node name="NearLayer" type="ParallaxLayer" parent="Parallax"]
 motion_scale = Vector2(0.32, 0.55)
-motion_mirroring = Vector2(72, 0)
+motion_mirroring = Vector2(432, 0)
 
 [node name="Near" type="Sprite2D" parent="Parallax/NearLayer"]
-modulate = Color(0.52, 0.42, 0.44, 1)
+modulate = Color(0.3, 0.25, 0.28, 1)
 position = Vector2(0, 168)
-scale = Vector2(1, 3.4)
+scale = Vector2(20, 3.4)
 texture = ExtResource("14_bg")
 region_enabled = true
+region_rect = Rect2(96, 0, 72, 72)
 region_rect = Rect2(72, 24, 72, 48)
 
 [node name="Terrain" type="TileMapLayer" parent="."]

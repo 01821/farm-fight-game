@@ -205,11 +205,17 @@ func _touch_player() -> void:
 		if p.take_damage(_damage, global_position):
 			_contact_cd = CONTACT_COOLDOWN
 
+## ⚠️ 闪白**不能过曝**。角色图集里每个角色都是一整块圆角方块（不是抠出来的小人），
+##    所以 modulate 一调到 3 倍，整块就炸成白团 —— 玩家和怪贴在一起时
+##    两个白团叠着，根本分不清谁是谁（胶片里看得很清楚）。
+##    1.6 倍足够让"挨了一下"看得出来，又不至于把图案本身糊掉。
+const FLASH_TINT: Color = Color(1.6, 1.6, 1.6)
+
 func _update_flash(delta: float) -> void:
 	if _flash <= 0.0:
 		return
 	_flash = maxf(0.0, _flash - delta)
-	sprite.modulate = Color(3.0, 3.0, 3.0) if _flash > 0.0 else Color.WHITE
+	sprite.modulate = FLASH_TINT if _flash > 0.0 else Color.WHITE
 
 ## amount = 伤害；from = 攻击者位置（决定往哪边飞，给 Vector2.INF 就不击退）
 ## knock = 击退强度，不同武器/技能给的不一样（巨剑推得比短剑远）
