@@ -486,8 +486,13 @@ func _ready() -> void:
 	_player.total_planted = 2
 	await _step(3)
 	_check("差一点就不算完成", Guide.count_done() == 0)
+	# ⚠️ 临到关键断言之前**再清一次后面的条件** —— 否则别的系统在这一帧里
+	#    把 total_watered / total_harvested 拱上去了，链子会一次连推两环，
+	#    这条断言就偶发失败（三遍里挂过一次）。
+	_player.total_watered = 0
+	_player.total_harvested = 0
 	_player.total_planted = 3
-	await _step(3)
+	await get_tree().physics_frame
 	print("  INFO 种够 3 株之后：完成 ", Guide.count_done(), " 环，当前 ", Guide.current_text())
 	_check("做够了就完成第 1 环", Guide.has("plant_3"))
 	# ⚠️ 别断言 "浇水" —— 文案是"给作物**浇一次**水"，中间夹了字，
