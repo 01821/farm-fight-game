@@ -54,6 +54,13 @@ position = Vector2(330, 130)
 kind = 3
 patrol_dir = -1
 
+; 尖刺球：沉重的带刺铁球，**打它推不动、也僵不住** —— 只能打死或者躲开。
+; 地面顶面 y=198，它的碰撞盒 18x18 居中，所以放在 189。
+[node name="EnemySpike" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(560, 189)
+kind = 4
+patrol_dir = -1
+
 ; 宝箱也是**预建实例**。地面顶面 y=198，箱子的碰撞盒 18x18 居中，所以放在 189。
 [node name="Chest1" parent="." instance=ExtResource("7_chest")]
 position = Vector2(150, 189)

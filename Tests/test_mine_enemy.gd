@@ -169,6 +169,44 @@ func _ready() -> void:
 	await _step(3)
 	_check("拉远之后不再追", not _bat.is_chasing())
 
+	print("--- 尖刺球（重单位：打不动、僵不住） ---")
+	_check("怪的种类表有 5 种（含尖刺球）", MineEnemy.KINDS.size() == 5)
+	var spike := _level.get_node_or_null("EnemySpike") as MineEnemy
+	_check("关卡里摆了尖刺球", spike != null)
+	if spike != null:
+		print("  INFO ", spike.display_name(), " hp=", spike.hp, " 重=", spike.heavy)
+		_check("名字是尖刺球", spike.display_name() == "尖刺球")
+		_check("贴图用图集第 0 行最后一格", spike.sprite.region_rect == Rect2(8 * 24, 0, 24, 24))
+		_check("被标成了『重』单位", spike.heavy)
+		_check("硬直抗性很高", spike.stun_scale < 0.5)
+
+		# 对照实验：同样的击退，机器人会被推走，尖刺球几乎不动。
+		# 这才叫"验证了免疫"，只打一下看它没动是不够的 —— 也可能是我击退写坏了。
+		spike.global_position = Vector2(600, 189)
+		spike.velocity = Vector2.ZERO
+		await _step(3)
+		var spike_x0: float = spike.global_position.x
+		spike.take_damage(1, spike.global_position - Vector2(40, 0), 300.0)
+		await _step(4)
+		var spike_moved: float = absf(spike.global_position.x - spike_x0)
+
+		var robot := _level.get_node("EnemyA") as MineEnemy
+		robot.global_position = Vector2(600, 189)
+		robot.velocity = Vector2.ZERO
+		await _step(3)
+		var robot_x0: float = robot.global_position.x
+		robot.take_damage(1, robot.global_position - Vector2(40, 0), 300.0)
+		await _step(4)
+		var robot_moved: float = absf(robot.global_position.x - robot_x0)
+
+		print("  INFO 同样一脚 300 击退：尖刺球动了 ", snappedf(spike_moved, 0.1),
+			" px，机器人动了 ", snappedf(robot_moved, 0.1), " px")
+		# 用**相对比较**而不是写死阈值：击退是逐帧衰减的，4 帧只积累十几像素，
+		# 写死一个数会变成"测的是衰减曲线"而不是"测的免疫"。
+		_check("尖刺球吃不到击退（几乎原地不动）", spike_moved < 4.0)
+		_check("机器人照常被推飞（对照组，动得明显更多）",
+			robot_moved > 8.0 and robot_moved > spike_moved * 3.0)
+
 	print("--- 打死怪不会报错 ---")
 	var hp_b: int = _bat.hp
 	for i in range(hp_b):

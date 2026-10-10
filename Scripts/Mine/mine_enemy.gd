@@ -27,13 +27,21 @@ const FLY_TRACK_SPEED: float = 34.0
 ## 角色图集是 24×24 的 9 列 × 3 行网格
 const CELL: int = 24
 
-## kind → {名称, 图集格, 血量, 速度, 伤害, 是否飞行}
+## kind → {名称, 图集格, 血量, 速度, 伤害, 是否飞行, 是否"重"（免疫击退、抗硬直）}
+##
+## 「重」是给**尖刺球**用的：它是一颗沉重的带刺铁球，
+## 打它推不动、也僵不住 —— 你只能打死它或者躲开，没法像打机器人那样把它连击顶飞。
+## 这一条差异让它成了真正不同的威胁，而不是"换个颜色的机器人"。
 const KINDS: Array[Dictionary] = [
-	{"name": "绿机兵", "cell": Vector2i(0, 0), "hp": 3, "speed": 26.0, "damage": 1, "fly": false},
-	{"name": "蓝机兵", "cell": Vector2i(2, 0), "hp": 4, "speed": 20.0, "damage": 1, "fly": false},
-	{"name": "红炸怪", "cell": Vector2i(6, 1), "hp": 2, "speed": 34.0, "damage": 1, "fly": false},
-	{"name": "蝙蝠", "cell": Vector2i(7, 2), "hp": 2, "speed": 42.0, "damage": 1, "fly": true},
+	{"name": "绿机兵", "cell": Vector2i(0, 0), "hp": 3, "speed": 26.0, "damage": 1, "fly": false, "heavy": false},
+	{"name": "蓝机兵", "cell": Vector2i(2, 0), "hp": 4, "speed": 20.0, "damage": 1, "fly": false, "heavy": false},
+	{"name": "红炸怪", "cell": Vector2i(6, 1), "hp": 2, "speed": 34.0, "damage": 1, "fly": false, "heavy": false},
+	{"name": "蝙蝠", "cell": Vector2i(7, 2), "hp": 2, "speed": 42.0, "damage": 1, "fly": true, "heavy": false},
+	{"name": "尖刺球", "cell": Vector2i(8, 0), "hp": 3, "speed": 36.0, "damage": 1, "fly": false, "heavy": true},
 ]
+
+## 「重」的单位挨打时的僵直倍率
+const HEAVY_STUN_SCALE: float = 0.15
 
 enum State { PATROL, CHASE }
 
@@ -55,9 +63,11 @@ var _dead: bool = false
 var _state: int = State.PATROL
 ## 显示用的名字。**不要用 node.name** —— 运行时给节点改名会让 get_node("EnemyA") 之
 ## 类的路径查找失效（踩过一次：敌人全部找不到了，还以为是分组没注册）。
-## 挨打僵直时间的倍率。Boss 会覆盖成很小的值 ——
-## 不然玩家可以把它连击锁死，Boss 战变成"按住 F 不放"。
+## 挨打僵直时间的倍率。Boss 和"重"单位会覆盖成很小的值 ——
+## 不然玩家可以把它连击锁死，战斗退化成"按住 F 不放"。
 var stun_scale: float = 1.0
+## 「重」单位：免疫击退（尖刺球）
+var heavy: bool = false
 var _title: String = "怪"
 var _player: MinePlayer
 
@@ -86,6 +96,10 @@ func _apply_kind() -> void:
 	_damage = int(d["damage"])
 	_flying = bool(d["fly"])
 	_title = String(d["name"])
+	heavy = bool(d.get("heavy", false))
+	if heavy:
+		# 重单位打不动也僵不住 —— 它是一颗铁球，不是一台小机器
+		stun_scale = HEAVY_STUN_SCALE
 
 func display_name() -> String:
 	return _title
@@ -206,7 +220,9 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF, knock: float = KNOCKB
 	hp = maxi(0, hp - amount)
 	_flash = FLASH_TIME
 	_stun = HIT_STUN * stun_scale
-	if from.is_finite():
+	# 「重」单位免疫击退：打它推不动。让它成为"只能打死或躲开"的威胁，
+	# 而不是又一个可以被连击顶飞的机器人。
+	if from.is_finite() and not heavy:
 		var away: Vector2 = global_position - from
 		if away.length() > 0.01:
 			var dir: Vector2 = away.normalized()

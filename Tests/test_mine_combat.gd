@@ -61,7 +61,8 @@ func _ready() -> void:
 	print("--- 敌人 ---")
 	var all := get_tree().get_nodes_in_group("mine_enemy")
 	print("  INFO 关卡里有 ", all.size(), " 只怪")
-	_check("关卡里预建了敌人", all.size() == 3)
+	# 绿机兵 + 蓝机兵 + 蝙蝠 + 尖刺球 = 4（Boss 不在这个分组里，它是另一类东西）
+	_check("关卡里预建了敌人", all.size() == 4)
 	_check("默认种类是绿机兵（3 血）", _enemy.hp == 3 and _enemy.max_hp == 3)
 	_check("敌人贴图用 24×24 网格（0,0）", _enemy.sprite.region_rect == Rect2(0, 0, 24, 24))
 	_check("蝙蝠是另一种贴图", (_level.get_node("EnemyBat") as MineEnemy).sprite.region_rect == Rect2(168, 48, 24, 24))
@@ -113,7 +114,7 @@ func _ready() -> void:
 	_check("发出 died 信号", _died_signal)
 	await _step(3)
 	_check("死掉的敌人离开场景", not is_instance_valid(_enemy))
-	_check("场上还剩 2 只怪", get_tree().get_nodes_in_group("mine_enemy").size() == 2)
+	_check("场上还剩 3 只怪", get_tree().get_nodes_in_group("mine_enemy").size() == 3)
 
 	print("--- 飘字会自己消失 ---")
 	print("  INFO 当前场上飘字数量 = ", _damage_numbers())
