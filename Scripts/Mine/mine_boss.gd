@@ -13,6 +13,8 @@ class_name MineBoss extends MineEnemy
 ## 不预告的攻击不叫难度，叫不讲理。
 
 signal engaged
+## 进入二阶段（血量过半）时发一次 —— 给音乐、演出、UI 留的钩子
+signal enraged
 
 enum Phase { IDLE, CHASE, WINDUP, CHARGE, RECOVER }
 
@@ -29,6 +31,20 @@ const CHARGE_COOLDOWN: float = 2.4
 ## ⚠️ 不能给逼近设一个很大的计时器 —— 相位推进是靠"计时到了"触发的，
 ##    设成 999 会让它永远卡在逼近、**一次都不冲**（踩过）。
 const CHASE_RECHECK: float = 0.25
+
+## --- 二阶段（暴走）---
+## 血量掉到这个比例以下就进二阶段
+const PHASE2_HP_RATIO: float = 0.5
+## 暴走之后：更快、冷却更短、蓄力更短 —— 但**依然有蓄力**。
+## 这是刻意的：变凶可以，变得不讲理不行。玩家练出来的"看闪红就躲"必须一直管用。
+const P2_CHASE_SPEED: float = 31.0
+const P2_CHARGE_COOLDOWN: float = 1.4
+const P2_WINDUP: float = 0.5
+## 暴走之后有几率**连着冲两次**（之间只喘一小口气）
+const P2_DOUBLE_CHANCE: float = 0.55
+const P2_DOUBLE_RECOVER: float = 0.3
+## 暴走时的底色（发红，一眼能看出它变了）
+const ENRAGED_TINT := Color(1.45, 0.72, 0.72)
 ## 蓄力时闪的颜色（预警）
 const WARN_COLOR := Color(2.4, 0.7, 0.5)
 
@@ -42,6 +58,10 @@ var _phase_t: float = 0.0
 var _charge_cd: float = 0.0
 var _charge_dir: float = 1.0
 var _engaged: bool = false
+## 战斗阶段：1 = 常规，2 = 暴走
+var combat_phase: int = 1
+## 这一轮喘息之后要不要立刻再冲一次（暴走专属）
+var _pending_double: bool = false
 
 ## 角色图集是 24×24 的 9 列 × 3 行网格
 ## （注意：父类 MineEnemy 已经有同名的 CELL 常量，所以这里换个名字）
@@ -83,6 +103,35 @@ func phase_name() -> String:
 func is_engaged() -> bool:
 	return _engaged
 
+func is_enraged() -> bool:
+	return combat_phase >= 2
+
+func combat_phase_name() -> String:
+	return "暴走" if combat_phase >= 2 else "常规"
+
+## 血量过半就进二阶段。返回这次**是不是刚刚**进的。
+func check_phase() -> bool:
+	if combat_phase >= 2 or max_hp <= 0 or hp <= 0:
+		return false
+	if float(hp) / float(max_hp) > PHASE2_HP_RATIO:
+		return false
+	combat_phase = 2
+	_speed = P2_CHASE_SPEED
+	# 正在蓄力的话**不缩短这一次** —— 突然把预警抽掉是最不讲理的做法
+	if _phase == Phase.CHASE:
+		_charge_cd = minf(_charge_cd, P2_CHARGE_COOLDOWN)
+	print("[矿洞] ", boss_name, " 暴走了！（血量过半）")
+	enraged.emit()
+	return true
+
+## 挨打时顺便检查阶段 —— 不能只在 _think 里查，
+## 否则"正好把它打过半血"的那一下要等下一帧才反应，打击反馈会迟钝。
+func take_damage(amount: int, from: Vector2 = Vector2.INF, knock: float = KNOCKBACK_SPEED) -> bool:
+	var died: bool = super.take_damage(amount, from, knock)
+	if not died:
+		check_phase()
+	return died
+
 ## 血量比例（给 HUD 画血条）
 func hp_ratio() -> float:
 	if max_hp <= 0:
@@ -115,7 +164,13 @@ func _think(delta: float) -> void:
 	if _phase_t <= 0.0:
 		_advance_phase(dist, dx)
 	_apply_phase_motion(delta, dx)
-	sprite.modulate = WARN_COLOR if _phase == Phase.WINDUP else (Color(3.0, 3.0, 3.0) if _flash > 0.0 else Color.WHITE)
+	if _phase == Phase.WINDUP:
+		sprite.modulate = WARN_COLOR
+	elif _flash > 0.0:
+		sprite.modulate = Color(3.0, 3.0, 3.0)
+	else:
+		# 暴走时底色发红 —— 玩家一眼就知道"它变了"，不用看血条
+		sprite.modulate = ENRAGED_TINT if is_enraged() else Color.WHITE
 
 func _set_phase(p: int) -> void:
 	_phase = p
@@ -123,7 +178,7 @@ func _set_phase(p: int) -> void:
 		Phase.CHASE:
 			_phase_t = CHASE_RECHECK
 		Phase.WINDUP:
-			_phase_t = WINDUP_TIME
+			_phase_t = WINDUP_TIME if not is_enraged() else P2_WINDUP
 			velocity = Vector2.ZERO
 			print("[矿洞] ", boss_name, " 在蓄力……")
 		Phase.CHARGE:
@@ -134,20 +189,26 @@ func _set_phase(p: int) -> void:
 			print("[矿洞] ", boss_name, " 冲过来了！")
 		Phase.RECOVER:
 			_phase_t = RECOVER_TIME
-			_charge_cd = CHARGE_COOLDOWN
+			_charge_cd = CHARGE_COOLDOWN if not is_enraged() else P2_CHARGE_COOLDOWN
 			velocity = Vector2.ZERO
 
 ## 相位推进：只有在"逼近"里待够冷却才允许再冲一次
 func _advance_phase(dist: float, dx: float) -> void:
 	match _phase:
 		Phase.CHASE:
-			if _charge_cd <= 0.0 and dist < ENGAGE_RANGE * 0.9:
+			# 暴走时的连冲：喘 0.25 秒再来一次，逼玩家把"看闪红就躲"连做两遍。
+			# 注意**蓄力照旧** —— 连着冲可以，偷掉预警不行。
+			if _pending_double:
+				_pending_double = false
+				_set_phase(Phase.WINDUP)
+			elif _charge_cd <= 0.0 and dist < ENGAGE_RANGE * 0.9:
 				_set_phase(Phase.WINDUP)
 		Phase.WINDUP:
 			_set_phase(Phase.CHARGE)
 		Phase.CHARGE:
 			_set_phase(Phase.RECOVER)
 		Phase.RECOVER:
+			_pending_double = is_enraged() and randf() < P2_DOUBLE_CHANCE
 			_set_phase(Phase.CHASE)
 
 func _apply_phase_motion(delta: float, dx: float) -> void:

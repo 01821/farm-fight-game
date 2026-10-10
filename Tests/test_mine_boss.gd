@@ -14,9 +14,13 @@ var _player: MinePlayer
 var _boss: MineBoss
 var _hud: MineHud
 var _engaged_signal: bool = false
+var _enrage_signal: bool = false
 
 func _on_boss_engaged() -> void:
 	_engaged_signal = true
+
+func _on_boss_enraged() -> void:
+	_enrage_signal = true
 
 func _check(label: String, ok: bool) -> void:
 	if ok:
@@ -122,6 +126,61 @@ func _ready() -> void:
 	_check("蓄力之后才冲撞", seen.has("冲撞"))
 	_check("冲撞完会喘息（给玩家反击窗口）", seen.has("喘息"))
 	_check("蓄力时会闪成预警色", saw_warn_color)
+
+	print("--- 二阶段：血量过半就暴走 ---")
+	_check("一开始是常规阶段", _boss.combat_phase == 1)
+	_check("一开始不是暴走", not _boss.is_enraged())
+	_check("阶段名字是常规", _boss.combat_phase_name() == "常规")
+	# ⚠️ 断言要盯**成员变量** _enrage_signal。
+	#    第一版写了个局部 `var enrage_signal := false` 然后断言它 ——
+	#    但信号处理函数写的是成员，局部那个永远没人写，断言必然失败。
+	_boss.enraged.connect(_on_boss_enraged)
+
+	# 打到刚好过半血还差一点 —— 不该触发
+	_boss.hp = int(ceil(float(_boss.max_hp) * MineBoss.PHASE2_HP_RATIO)) + 1
+	_boss.check_phase()
+	_check("血还没过半时不暴走", _boss.combat_phase == 1)
+
+	# 真正打过半血：**走 take_damage 这条路**，验证它自己会检查
+	var half_at: int = int(floor(float(_boss.max_hp) * MineBoss.PHASE2_HP_RATIO))
+	_boss.hp = half_at + 1
+	_boss.take_damage(1, _player.global_position)
+	print("  INFO 掉到 ", _boss.hp, "/", _boss.max_hp, " 时：阶段=", _boss.combat_phase_name())
+	_check("挨打掉过半血会自动进二阶段", _boss.is_enraged())
+	_check("发了 enraged 信号（给音乐/演出留的钩子）", _enrage_signal)
+	_check("阶段名字变成暴走", _boss.combat_phase_name() == "暴走")
+
+	# 变凶了，但**预警不能丢**
+	print("  INFO 暴走前蓄力 ", MineBoss.WINDUP_TIME, " 秒，暴走后 ", MineBoss.P2_WINDUP, " 秒")
+	_check("暴走之后蓄力更短（更凶）", MineBoss.P2_WINDUP < MineBoss.WINDUP_TIME)
+	_check("★ 但蓄力**没有消失**（预警still在）", MineBoss.P2_WINDUP > 0.2)
+	_check("暴走之后冲撞冷却更短", MineBoss.P2_CHARGE_COOLDOWN < MineBoss.CHARGE_COOLDOWN)
+
+	# 暴走之后照样要走完整套预告流程
+	var seen2: Dictionary = {}
+	var saw_warn_2 := false
+	for i in range(420):
+		await get_tree().physics_frame
+		if not is_instance_valid(_boss):
+			break
+		_boss.hp = maxi(1, _boss.hp)     # 别让它死，这节只测行为
+		seen2[_boss.phase_name()] = true
+		if _boss.phase_name() == "蓄力" and _boss.sprite.modulate.r > 1.8 and _boss.sprite.modulate.g < 1.0:
+			saw_warn_2 = true
+		if absf(_boss.global_position.x - _player.global_position.x) > 150.0:
+			_player.global_position.x = _boss.global_position.x - 100.0
+	print("  INFO 暴走后观察到的相位：", seen2.keys())
+	_check("暴走之后照样会蓄力（预警没被偷掉）", seen2.has("蓄力"))
+	_check("暴走之后照样会冲撞", seen2.has("冲撞"))
+	_check("暴走之后照样会喘息", seen2.has("喘息"))
+	_check("蓄力时依然闪预警色", saw_warn_2)
+	_check("暴走时底色发红（一眼看得出它变了）", _boss.sprite.modulate.r > 1.0)
+
+	print("--- HUD 上标出暴走 ---")
+	await _step(3)
+	var boss_label2 := _level.get_node("MineHud/BossLabel") as Label
+	print("  INFO ", boss_label2.text)
+	_check("Boss 血条上写了暴走", "暴走" in boss_label2.text)
 
 	print("--- 拆掉它 ---")
 	var coin_drops: int = _level.boss_coin_drops

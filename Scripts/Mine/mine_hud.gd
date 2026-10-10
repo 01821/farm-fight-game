@@ -127,7 +127,10 @@ func _refresh_boss() -> void:
 	boss_fill.visible = show
 	if not show:
 		return
-	boss_label.text = "%s   %d / %d" % [boss.display_name(), boss.hp, boss.max_hp]
+	boss_label.text = "%s   %d / %d%s" % [
+		boss.display_name(), boss.hp, boss.max_hp,
+		"   ★暴走" if boss.is_enraged() else ""
+	]
 	boss_fill.size.x = BOSS_BAR_WIDTH * boss.hp_ratio()
 
 ## 按当前血量刷新每一颗心：满 / 半 / 空。**一颗心 = 2 点血。**
