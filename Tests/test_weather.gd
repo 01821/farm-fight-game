@@ -132,6 +132,95 @@ func _ready() -> void:
 	await _step(2)
 	_check("HUD 显示晴天", "晴天" in info.text)
 
+	print("--- 干旱：一株要浇两遍才透 ---")
+	_weather.set_rainy(false)
+	await _step(2)
+	_check("平时浇一遍就够", _weather.water_passes_needed() == 1)
+	_check("平时不是干旱", not _weather.is_drought())
+
+	# 种一株，晴天浇一次就该透
+	_land.clear_all_plants()
+	await _step(2)
+	var tiles2 := _farm_tiles()
+	_move_to_tile(tiles2[0])
+	_ctl.use_held_item()
+	await _step(2)
+	var dry_plant: BasePlant = _land.plants.get(tiles2[0])
+	_check("种下去了", dry_plant != null)
+	if dry_plant != null:
+		_player.water_left = 10
+		dry_plant.water()
+		print("  INFO 晴天浇一遍：watered=", dry_plant.is_watered, " passes=", dry_plant.water_passes)
+		_check("晴天浇一遍就透了", dry_plant.is_watered)
+
+		# 换成干旱天
+		_weather.set_drought()
+		await _step(2)
+		_check("切换成干旱了", _weather.is_drought())
+		_check("干旱天要浇两遍", _weather.water_passes_needed() == 2)
+		_check("干旱有自己名字", _weather.sky_name() == "干旱")
+		_check("干旱不是雨天", not _weather.is_rainy)
+		_check("干旱有自己的色调", _weather.tint_color() != Weather.RAIN_TINT)
+		_check("干旱也参与调色", _weather.rain_amount() > 0.0)
+		_check("每株作物的要求也跟着变", dry_plant.water_need() == 2)
+
+		print("--- 干旱下的两遍浇水 ---")
+		# 让它重新变干（相当于过了一夜）
+		dry_plant.is_watered = false
+		dry_plant.water_passes = 0
+		dry_plant.timer.stop()
+		await _step(2)
+		_check("先清成干的", not dry_plant.is_watered and dry_plant.water_passes == 0)
+
+		var first: bool = dry_plant.water()
+		print("  INFO 第 1 遍：生效=", first, " watered=", dry_plant.is_watered,
+			" passes=", dry_plant.water_passes, " 湿了但没透=", dry_plant.is_damp())
+		_check("第 1 遍浇水确实生效了", first)
+		_check("★ 但第 1 遍**没浇透**（干旱天）", not dry_plant.is_watered)
+		_check("状态是『湿了但没透』", dry_plant.is_damp())
+		_check("还缺水（所以还能再浇）", dry_plant.can_water())
+		_check("湿痕已经显示出来了（让玩家知道浇过了）", dry_plant.wet_mark.visible)
+
+		var second: bool = dry_plant.water()
+		print("  INFO 第 2 遍：生效=", second, " watered=", dry_plant.is_watered,
+			" passes=", dry_plant.water_passes)
+		_check("第 2 遍浇透了", dry_plant.is_watered)
+		_check("已经浇透，不能再浇", not dry_plant.can_water())
+		_check("浇透之后不再是『湿了没透』", not dry_plant.is_damp())
+
+		print("--- 干旱的浇水次数要能存档 ---")
+		dry_plant.is_watered = false
+		dry_plant.water_passes = 1
+		dry_plant.timer.stop()
+		var sd: Dictionary = dry_plant.to_save_data()
+		print("  INFO 存档内容 ", sd)
+		_check("存档里记了浇了几遍", int(sd.get("passes", -1)) == 1)
+		dry_plant.water_passes = 0
+		dry_plant.apply_save_data(sd)
+		_check("读档能读回浇水遍数", dry_plant.water_passes == 1)
+		_check("读档后仍然是『湿了没透』", dry_plant.is_damp())
+		dry_plant.water()
+		_check("读档后接着浇第 2 遍能浇透", dry_plant.is_watered)
+
+	print("--- 边界：必然晴天时不该掷出干旱 ---")
+	# rain_chance = 0 的语义就是"必然晴天"。如果那时候还会随机出干旱，
+	# 老测试里"必然晴天"那一条就会变成偶发失败。
+	_weather.rain_chance = 0.0
+	var saw_drought := false
+	for i in range(200):
+		_weather.roll_for_day(1)
+		if _weather.is_drought():
+			saw_drought = true
+	_check("200 次必然晴天里一次干旱都没出", not saw_drought)
+
+	_weather.rain_chance = 1.0
+	_weather.roll_for_day(1)
+	_check("必然下雨时也不会变成干旱", _weather.is_rainy and not _weather.is_drought())
+	_weather.rain_chance = 0.3
+	_weather.set_rainy(false)
+	_land.clear_all_plants()
+	await _step(2)
+
 	_finish()
 
 func _finish() -> void:
