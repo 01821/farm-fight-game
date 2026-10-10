@@ -1015,6 +1015,30 @@ Boss 自己进 `"mine_boss"`，关卡分别 hook 两个分组。
 | 蓝机兵 | (2,0) | | 蝙蝠 | (7,2) |
 | 尖刺球 | (8,0) | | Boss 大型机械 | (4,2) |
 
+### 导出成 exe（已打通）
+
+**结论：用 4.7.2 编辑器导出，不要用 4.7.1。**
+
+本机 `%APPDATA%\Godot\export_templates\4.7.1.stable\` 是**空目录**，
+4.7.2.stable 才是完整的 —— 用 4.7.1 导出会报
+`Cannot export project with preset "Windows Desktop" due to configuration errors`，
+**报错信息不会告诉你"模板目录是空的"**，只会把两个模板路径列出来。
+
+```powershell
+$g72 = 'E:\godot\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64.exe'
+# 换引擎版本之后先重新导入一次
+& $g72 --headless --path . --import
+& $g72 --headless --path . --export-release "Windows Desktop" "E:\godot\farmAndFightGame\build\FarmAndFight.exe"
+```
+
+- 产物：`E:\godot\farmAndFightGame\build\FarmAndFight.exe`，约 **105.7 MB**
+- `binary_format/embed_pck=true`，**PCK 嵌在 exe 里** → 只有一个文件，双击就能玩
+- 输出目录**刻意放在仓库外面**，免得 100MB 的 exe 被提交进 git
+- 验证方式：`FarmAndFight.exe --headless --quit-after 600`，退出码 0 且无脚本错误
+
+> 从 4.7.1 升到 4.7.2 之后，**590 项断言全部照常通过**，项目文件也没被改写
+> （只有 `export_presets.cfg` 有变化）。补丁版本升级是安全的。
+
 ### 待定（需要用户拍板）
 
 - **矿洞里的主角用哪个形象？** 农场主角是 `kenney_tiny-farm` 的俯视角人类农夫，
