@@ -216,6 +216,48 @@ func _ready() -> void:
 		await _step(2)
 	_check("蝙蝠被打死了", not is_instance_valid(_bat))
 
+	print("--- 受击反馈：屏幕边缘闪红 + 低血量心跳 ---")
+	var hud := _level.get_node("MineHud") as MineHud
+	var bars := hud.hurt_bars()
+	_check("受击边框有 4 条边", bars.size() == 4)
+	_player.hp = MinePlayer.MAX_HP
+	await _step(35)
+	print("  INFO 满血时边框亮度 ", snappedf(hud.hurt_alpha(), 0.001))
+	_check("满血时边框是看不见的", hud.hurt_alpha() < 0.01)
+
+	# 挨一下，边框应该立刻冲上去
+	_player.hp = MinePlayer.MAX_HP
+	_player.take_damage(1, Vector2(_player.global_position.x - 40, _player.global_position.y))
+	await _step(2)
+	var peak: float = hud.hurt_alpha()
+	print("  INFO 挨打后边框亮度 ", snappedf(peak, 0.001))
+	_check("挨打后边框亮起来了", peak > 0.2)
+	_check("亮度不超过上限", peak <= MineHud.HURT_PEAK + 0.001)
+	_check("四条边一起亮", bars[0].color.a == bars[3].color.a)
+
+	# 淡出
+	await _step(int(MineHud.HURT_FADE * 60) + 8)
+	print("  INFO 淡出后亮度 ", snappedf(hud.hurt_alpha(), 0.001))
+	_check("会自己淡下去", hud.hurt_alpha() < 0.01)
+
+	# 低血量心跳：**不给它新的伤害**，边框也应该自己一下一下地跳
+	_player.hp = 1
+	var lo: float = 1.0
+	var hi: float = 0.0
+	for i in range(int(MineHud.BEAT_PERIOD * 60) + 6):
+		await get_tree().physics_frame
+		var a: float = hud.hurt_alpha()
+		lo = minf(lo, a)
+		hi = maxf(hi, a)
+	print("  INFO 低血量一个心跳周期内：最暗 ", snappedf(lo, 0.001), " 最亮 ", snappedf(hi, 0.001))
+	_check("低血量时边框会自己亮起来（心跳）", hi > 0.1)
+	_check("心跳是起伏的，不是常亮", lo < hi * 0.5)
+
+	# 血量回到安全线以上，心跳该停
+	_player.hp = MinePlayer.MAX_HP
+	await _step(int(MineHud.BEAT_PERIOD * 60) + 8)
+	_check("血量恢复后心跳停止", hud.hurt_alpha() < 0.01)
+
 	_release_all()
 	print("RESULT fail=", _fail)
 	get_tree().quit()
