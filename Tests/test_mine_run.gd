@@ -214,6 +214,65 @@ func _ready() -> void:
 	print("  INFO ", torch_txt)
 	_check("HUD 同时显示金币和矿石", "金" in torch_txt and "矿" in torch_txt)
 
+	print("--- 分层：越深越肥，但火把不补 ---")
+	MineRun.scene_switch_enabled = false
+	MineRun.start_run()
+	_check("进洞从第 1 层开始", MineRun.depth == 1)
+	_check("第 1 层倍率是 1", is_equal_approx(MineRun.loot_multiplier(), 1.0))
+	_check("有 3 层", MineRun.MAX_DEPTH == 3)
+	_check("第 1 层不是最深处", not MineRun.is_deepest())
+
+	var torch_before: float = MineRun.torch_left
+	_check("能下到第 2 层", MineRun.descend())
+	_check("层数变了", MineRun.depth == 2)
+	print("  INFO 第 2 层：收获 x", MineRun.loot_multiplier(), "，敌人 x", MineRun.enemy_multiplier(),
+		"，火把 ", snappedf(MineRun.torch_left, 0.1), "（下潜前 ", snappedf(torch_before, 0.1), "）")
+	_check("越深收获倍率越高", MineRun.loot_multiplier() > 1.0)
+	_check("越深敌人越强", MineRun.enemy_multiplier() > 1.0)
+	_check("★ 下潜不补火把", is_equal_approx(MineRun.torch_left, torch_before))
+
+	# 倍率真的作用在收获上
+	MineRun.gold = 0
+	MineRun.add_gold(10)
+	var expect2: int = int(round(10.0 * MineRun.loot_multiplier()))
+	print("  INFO 第 2 层捡 10 金 → 实得 ", MineRun.gold, "（倍率算出来应是 ", expect2, "）")
+	_check("收获按层数倍率放大", MineRun.gold == expect2)
+	_check("确实比第 1 层多", MineRun.gold > 10)
+
+	MineRun.descend()
+	_check("能下到第 3 层", MineRun.depth == 3)
+	_check("第 3 层是最深处", MineRun.is_deepest())
+	_check("到底了就不能再下", MineRun.descend() == false)
+	_check("层数没被越界加", MineRun.depth == 3)
+
+	print("--- 井口：不拆关底不让下 ---")
+	var well := _level.get_node_or_null("DescendPoint") as DescendPoint
+	_check("关卡最右边有下潜井口", well != null)
+	if well != null:
+		MineRun.depth = 1
+		var d0: int = MineRun.depth
+		MineRun.boss_down = false
+		print("  INFO 关底没拆时 can_descend = ", well.can_descend())
+		_check("关底没拆时井口是封着的", not well.can_descend())
+		_player.global_position = well.global_position
+		await _step(5)
+		_check("封着的时候走过去也不会下潜", MineRun.depth == d0)
+
+		MineRun.boss_down = true
+		_check("拆掉关底后井口开了", well.can_descend())
+		_player.global_position = Vector2(100, 198)
+		await _step(5)
+		_player.global_position = well.global_position
+		await _step(5)
+		print("  INFO 走进井口后层数 ", d0, " → ", MineRun.depth)
+		_check("走进去就下一层", MineRun.depth == d0 + 1)
+
+	print("--- HUD 显示层数 ---")
+	await _step(4)
+	var layer_txt := (_level.get_node("MineHud/TorchLabel") as Label).text
+	print("  INFO ", layer_txt)
+	_check("HUD 上写着当前层数", "层" in layer_txt)
+
 	print("--- 农场那边的矿洞口 ---")
 	# 前面开着的那趟要先收掉，否则"不该误启动一趟"这条会被自己前面的状态干扰
 	MineRun.active = false

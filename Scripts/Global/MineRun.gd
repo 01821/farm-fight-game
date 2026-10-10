@@ -17,7 +17,18 @@ const MINE_SCENE: String = "res://Scenes/Mine/mine_level.tscn"
 ## 一趟的火把时间（秒）。烧完自动被送回农场，**收获保留**。
 const TORCH_TIME: float = 75.0
 
+## --- 分层 ---
+## 矿洞有几层。**火把是一根到底的**：下潜不补时间，
+## 所以"再往下走一层，还是见好就收"是个真抉择。
+const MAX_DEPTH: int = 3
+## 每深一层的收获倍率（越深越肥）
+const DEPTH_LOOT: Array[float] = [1.0, 1.7, 2.6]
+## 每深一层，怪的强度倍率
+const DEPTH_ENEMY: Array[float] = [1.0, 1.45, 2.0]
+
 var active: bool = false
+## 当前在第几层（1 起）
+var depth: int = 1
 ## 这一趟捡到的金币
 var gold: int = 0
 ## 这一趟挖到的矿石块数（价值已经算进 gold 里了，这个只是给结算显示用）
@@ -35,6 +46,7 @@ var _pending: Dictionary = {}
 
 func start_run() -> void:
 	active = true
+	depth = 1
 	gold = 0
 	ore = 0
 	boss_down = false
@@ -43,19 +55,39 @@ func start_run() -> void:
 	run_started.emit()
 	print("[矿洞] 进洞，火把 ", int(TORCH_TIME), " 秒")
 
+## 第 depth 层的收获倍率
+func loot_multiplier() -> float:
+	return DEPTH_LOOT[clampi(depth - 1, 0, DEPTH_LOOT.size() - 1)]
+
+## 第 depth 层的敌人强度倍率
+func enemy_multiplier() -> float:
+	return DEPTH_ENEMY[clampi(depth - 1, 0, DEPTH_ENEMY.size() - 1)]
+
+func is_deepest() -> bool:
+	return depth >= MAX_DEPTH
+
+## 下一层。已经是最深就返回 false。
+## **注意火把不会补** —— 这是整个分层的紧张感来源。
+func descend() -> bool:
+	if not active or is_deepest():
+		return false
+	depth += 1
+	print("[矿洞] 下到第 ", depth, " 层（收获 x", loot_multiplier(), "，火把只剩 ",
+		int(torch_left), " 秒）")
+	return true
+
 func add_gold(n: int) -> void:
 	if n <= 0:
 		return
-	gold += n
-	print("[矿洞] 捡到 ", n, " 金（这趟共 ", gold, "）")
+	# 越深越肥：倍率在这里统一乘，掉落物本身不用管自己在第几层
+	gold += int(round(float(n) * loot_multiplier()))
 
 ## 矿石：价值直接算进 gold，另外记一个块数给结算显示
 func add_ore(n: int) -> void:
 	if n <= 0:
 		return
 	ore += 1
-	gold += n
-	print("[矿洞] 挖到矿石 x1（值 ", n, " 金，这趟共 ", gold, " 金 / ", ore, " 块）")
+	gold += int(round(float(n) * loot_multiplier()))
 
 func add_kill() -> void:
 	kills += 1

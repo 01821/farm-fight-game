@@ -23,22 +23,65 @@ const SOLID := "#"
 const PLATFORM := "="
 const SPAWN := "S"
 
-@export var map: PackedStringArray = PackedStringArray([
-	"                                                ",
-	"                                                ",
-	"            ====                                ",
-	"                                                ",
-	"                      ====                      ",
-	"                                                ",
-	"        ====                    ====            ",
-	"                                                ",
-	"                                                ",
-	"  S                                             ",
-	"                                                ",
-	"################################################",
-	"################################################",
-	"################################################",
-])
+## 外部显式指定的地图。**留空就用当前层数对应的地图** ——
+## 测试会把它设成自己的小地图（那种情况下不该被分层覆盖掉）。
+@export var map: PackedStringArray = PackedStringArray()
+
+## 每层的地图（下标 = depth - 1）。
+## 用 var 而不是 const —— `PackedStringArray([...])` **不是常量表达式**，const 会编译失败。
+var MAPS: Array[PackedStringArray] = [
+	# 第 1 层：最宽松，平台少、间隔大
+	PackedStringArray([
+		"                                                ",
+		"                                                ",
+		"            ====                                ",
+		"                                                ",
+		"                      ====                      ",
+		"                                                ",
+		"        ====                    ====            ",
+		"                                                ",
+		"                                                ",
+		"  S                                             ",
+		"                                                ",
+		"################################################",
+		"################################################",
+		"################################################",
+	]),
+	# 第 2 层：平台变多、抬高，掉下去的风险变大
+	PackedStringArray([
+		"                                                ",
+		"        ====                                    ",
+		"                                                ",
+		"                  ====                          ",
+		"                              ====              ",
+		"                                                ",
+		"      ====            ====            ====      ",
+		"                                                ",
+		"                                                ",
+		"  S                                             ",
+		"                                                ",
+		"################################################",
+		"################################################",
+		"################################################",
+	]),
+	# 第 3 层：层层叠叠，落脚点碎，逼你一路跳
+	PackedStringArray([
+		"                                                ",
+		"      ====        ====        ====              ",
+		"                                                ",
+		"    ====        ====        ====        ====    ",
+		"                                                ",
+		"      ====        ====        ====              ",
+		"                                                ",
+		"    ====        ====        ====        ====    ",
+		"                                                ",
+		"  S                                             ",
+		"                                                ",
+		"################################################",
+		"################################################",
+		"################################################",
+	]),
+]
 
 ## 掉落物场景，在场景文件里预先接好
 @export var pickup_scene: PackedScene
@@ -53,13 +96,34 @@ const SPAWN := "S"
 func _ready() -> void:
 	build()
 	_hook_player()
+	_scale_enemies_by_depth()
 	# ⚠️ 这里**不要**自动 MineRun.start_run()。
 	#    踩过的坑：自动开局之后，测试里玩家一死就会触发 MineRun.finish()，
 	#    而 finish() 会真的 change_scene_to_file —— 测试场景当场被换掉，
 	#    后面所有断言全部失效，报的错还完全看不出跟矿洞有关。
 	#    现在只有真的从矿洞口进来（MineRun.active 已经是 true）才有火把倒计时。
 	if MineRun.active:
-		print("[矿洞] 火把 ", int(MineRun.torch_left), " 秒，烧完自动回农场")
+		print("[矿洞] 第 ", MineRun.depth, " 层，火把 ", int(MineRun.torch_left), " 秒")
+
+## 越深怪越强。血量和伤害一起涨 —— 只涨血的话，玩家会觉得"变肉了"而不是"变难了"。
+func _scale_enemies_by_depth() -> void:
+	var mult: float = MineRun.enemy_multiplier()
+	if is_equal_approx(mult, 1.0):
+		return
+	for n in get_tree().get_nodes_in_group("mine_enemy"):
+		var e := n as MineEnemy
+		if e == null:
+			continue
+		e.max_hp = maxi(1, int(round(float(e.max_hp) * mult)))
+		e.hp = e.max_hp
+		e.set("_damage", maxi(1, int(round(float(e.get("_damage")) * minf(mult, 1.6)))))
+	for n in get_tree().get_nodes_in_group("mine_boss"):
+		var b := n as MineEnemy
+		if b == null:
+			continue
+		b.max_hp = maxi(1, int(round(float(b.max_hp) * mult)))
+		b.hp = b.max_hp
+	print("[矿洞] 第 ", MineRun.depth, " 层：敌人强度 x", mult)
 
 func _hook_player() -> void:
 	if player == null:
@@ -144,12 +208,19 @@ func torch_ratio() -> float:
 		return 0.0
 	return clampf(MineRun.torch_left / MineRun.TORCH_TIME, 0.0, 1.0)
 
-## 把 map 铺成瓦片。返回出生点的格子坐标。
+## 当前实际用的地图：显式设过 `map` 就用它，否则按当前层数取。
+func active_map() -> PackedStringArray:
+	if map.size() > 0:
+		return map
+	return MAPS[clampi(MineRun.depth - 1, 0, MAPS.size() - 1)]
+
+## 把 active_map() 铺成瓦片。返回出生点的格子坐标。
 func build() -> Vector2i:
+	var m := active_map()
 	terrain.clear()
 	var spawn := Vector2i(2, 9)
-	for y in range(map.size()):
-		var row: String = map[y]
+	for y in range(m.size()):
+		var row: String = m[y]
 		for x in range(row.length()):
 			var ch: String = row[x]
 			match ch:
@@ -166,19 +237,21 @@ func build() -> Vector2i:
 	return spawn
 
 func _char_at(x: int, y: int) -> String:
-	if y < 0 or y >= map.size():
+	var m := active_map()
+	if y < 0 or y >= m.size():
 		return " "
-	var row: String = map[y]
+	var row: String = m[y]
 	if x < 0 or x >= row.length():
 		return " "
 	return row[x]
 
 ## 关卡在全局坐标下的矩形（给摄像机做边界用）
 func world_rect() -> Rect2:
+	var m := active_map()
 	var cols: int = 0
-	for row in map:
+	for row in m:
 		cols = maxi(cols, row.length())
-	return Rect2(Vector2.ZERO, Vector2(cols * TILE_SIZE, map.size() * TILE_SIZE))
+	return Rect2(Vector2.ZERO, Vector2(cols * TILE_SIZE, m.size() * TILE_SIZE))
 
 ## 某个格子是不是实心的（测试用）
 func is_solid(cell: Vector2i) -> bool:
