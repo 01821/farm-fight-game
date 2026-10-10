@@ -1,0 +1,104 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/title.gd" id="1_title"]
+
+; 标题界面。整块预建，脚本只切可见性和文本。
+; 配色刻意压暗，让底下那层农场绿不那么刺眼。
+[node name="Title" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_title")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.07, 0.08, 0.11, 1)
+
+[node name="GameTitle" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 34.0
+offset_right = 360.0
+offset_bottom = 62.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "农 场 与 打 怪"
+
+[node name="SubTitle" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 62.0
+offset_right = 360.0
+offset_bottom = 80.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "白天种田，夜里防兽，闲了下矿"
+
+[node name="Slots" type="Node" parent="."]
+
+[node name="Slot1" type="Label" parent="Slots"]
+offset_left = 70.0
+offset_top = 116.0
+offset_right = 330.0
+offset_bottom = 138.0
+theme_override_font_sizes/font_size = 12
+text = "[1] 开始新游戏"
+
+[node name="Slot2" type="Label" parent="Slots"]
+offset_left = 70.0
+offset_top = 146.0
+offset_right = 330.0
+offset_bottom = 168.0
+theme_override_font_sizes/font_size = 12
+text = "[2] 开始新游戏"
+
+[node name="Slot3" type="Label" parent="Slots"]
+offset_left = 70.0
+offset_top = 176.0
+offset_right = 330.0
+offset_bottom = 198.0
+theme_override_font_sizes/font_size = 12
+text = "[3] 开始新游戏"
+
+[node name="Hint" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 262.0
+offset_right = 360.0
+offset_bottom = 282.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "[1/2/3] 选存档槽    [4] 设置    [F5] 退出游戏"
+
+[node name="Settings" type="Control" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="Settings"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.06, 0.09, 0.96)
+
+[node name="SettingsTitle" type="Label" parent="Settings"]
+offset_left = 60.0
+offset_top = 90.0
+offset_right = 340.0
+offset_bottom = 112.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "设置"
+
+[node name="SfxLabel" type="Label" parent="Settings"]
+offset_left = 100.0
+offset_top = 132.0
+offset_right = 300.0
+offset_bottom = 152.0
+theme_override_font_sizes/font_size = 12
+text = "[1] 音效：开"
+
+[node name="BackHint" type="Label" parent="Settings"]
+offset_left = 60.0
+offset_top = 200.0
+offset_right = 340.0
+offset_bottom = 220.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "[ESC] 返回"

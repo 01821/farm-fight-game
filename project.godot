@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="farmAndFightGame"
-run/main_scene="uid://btccb47s76sxj"
+run/main_scene="res://Scenes/Title/title.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
