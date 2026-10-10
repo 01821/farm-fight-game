@@ -224,6 +224,42 @@ func _ready() -> void:
 	print("  INFO 离地后立刻按跳，4 帧内是否起跳 = ", jumped)
 	_check("土狼时间：刚离地仍能起跳", jumped)
 
+	print("--- 视差背景 ---")
+	var px := _level.get_node_or_null("Parallax") as ParallaxBackground
+	_check("关卡里有视差背景", px != null)
+	var backdrop := _level.get_node_or_null("Backdrop") as CanvasLayer
+	_check("有垫底的底色层（防止层间露缝）", backdrop != null)
+	if px != null:
+		var far_layer := px.get_node("FarLayer") as ParallaxLayer
+		var near_layer := px.get_node("NearLayer") as ParallaxLayer
+		_check("有远层和近层两层", far_layer != null and near_layer != null)
+		if far_layer != null and near_layer != null:
+			print("  INFO 远层 motion_scale=", far_layer.motion_scale, " 近层=", near_layer.motion_scale)
+			_check("两层速度不一样（这才叫视差）", far_layer.motion_scale.x < near_layer.motion_scale.x)
+			_check("远层几乎不跟着走", far_layer.motion_scale.x < 0.2)
+			_check("两层都设了水平平铺（否则走出画面就空了）",
+				far_layer.motion_mirroring.x > 0.0 and near_layer.motion_mirroring.x > 0.0)
+			_check("底色在视差层后面（layer 更小）", backdrop.layer < px.layer)
+
+			# ⚠️ 只断言"节点存在 / 参数对"是不够的 —— 那验的是配置文件，不是行为。
+			#    真的把摄像机平移一段，量两个层**在屏幕上**滑动的距离：
+			#    视差层的屏幕位移 = (1 - motion_scale) × 摄像机位移，
+			#    所以远层（scale 小）在屏幕上滑得**更多**。
+			var far_sprite := far_layer.get_node("Far") as Sprite2D
+			var near_sprite := near_layer.get_node("Near") as Sprite2D
+			await _step(4)
+			var far_before: Vector2 = far_sprite.get_global_transform_with_canvas().origin
+			var near_before: Vector2 = near_sprite.get_global_transform_with_canvas().origin
+			# 直接把摄像机挪走，模拟玩家往右跑
+			_player.camera.global_position.x += 160.0
+			await _step(4)
+			var far_moved: float = absf(far_sprite.get_global_transform_with_canvas().origin.x - far_before.x)
+			var near_moved: float = absf(near_sprite.get_global_transform_with_canvas().origin.x - near_before.x)
+			print("  INFO 摄像机右移 160px 后：远层屏幕上滑了 ", snappedf(far_moved, 0.1),
+				" px，近层滑了 ", snappedf(near_moved, 0.1), " px")
+			_check("两层在屏幕上的滑动距离确实不同", absf(far_moved - near_moved) > 5.0)
+			_check("远层滑得更多（因为它跟着世界走得少）", far_moved > near_moved)
+
 	_release_all()
 	print("RESULT fail=", _fail)
 	get_tree().quit()
