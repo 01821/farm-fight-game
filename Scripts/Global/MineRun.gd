@@ -41,6 +41,8 @@ var kills: int = 0
 var last_boss_day: int = -1
 ## 进洞那天是第几天（由矿洞口在进洞时记下）
 var entry_day: int = 0
+## 进洞时用的是第几号存档槽（决定地图种子）
+var entry_slot: int = 1
 ## 每日首通关底的额外奖励
 const DAILY_FIRST_GOLD: int = 30
 
@@ -88,6 +90,11 @@ func enemy_multiplier() -> float:
 
 func is_deepest() -> bool:
 	return depth >= MAX_DEPTH
+
+## 当前这一层的地图种子。
+## **同一个存档 + 同一层 = 同一张图**，换存档或换层就是新图。
+func level_seed() -> int:
+	return MineGen.seed_for(entry_slot, depth)
 
 ## 下一层。已经是最深就返回 false。
 ## **注意火把不会补** —— 这是整个分层的紧张感来源。

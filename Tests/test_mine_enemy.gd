@@ -37,6 +37,14 @@ func _place_near(enemy: MineEnemy, distance: float, settle: int = 6) -> void:
 	_player.velocity = Vector2.ZERO
 	await _step(settle)
 
+func _flat_map() -> PackedStringArray:
+	## 一张只有地面、没有任何平台的空地图。飞行怪的测试要在开阔空气里做。
+	var out := PackedStringArray()
+	for y in range(MineGen.H):
+		out.append("#".repeat(MineGen.W) if y >= MineGen.GROUND_ROW else " ".repeat(MineGen.W))
+	out[MineGen.SPAWN_Y] = MineGen._put(out[MineGen.SPAWN_Y], MineGen.SPAWN_X, "S")
+	return out
+
 func _ready() -> void:
 	_level = (load("res://Scenes/Mine/mine_level.tscn") as PackedScene).instantiate()
 	add_child(_level)
@@ -141,6 +149,14 @@ func _ready() -> void:
 	_check("蝙蝠是飞行怪", _bat.is_flying())
 	await _step(40)
 	_check("飞行怪不会掉到地上", _bat.global_position.y < 190.0)
+
+	# ⚠️ 换成一张**没有平台**的平地地图再测。
+	#    新地图是程序化生成的，蝙蝠头顶可能正好压着一块平台，
+	#    它往下降时会撞上去、velocity.y 被 move_and_slide 清零，
+	#    于是下面那条断言就失败了 —— 而失败原因跟蝙蝠的 AI 毫无关系。
+	_level.map = _flat_map()
+	_level.build()
+	await _step(4)
 
 	# ⚠️ 关键：把玩家**水平拉开到接触范围之外**（70 > CONTACT_RANGE 15），
 	#    否则玩家会被反复撞飞、一直在空中弹，"他在上还是在下"就说不清了。

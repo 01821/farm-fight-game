@@ -84,6 +84,10 @@ func enter_mine() -> bool:
 	var cycle := get_tree().get_first_node_in_group("day_cycle") as DayCycle
 	MineRun.start_run()
 	MineRun.entry_day = cycle.day if cycle != null else 0
-	print("[矿洞] 第 ", MineRun.entry_day, " 天下矿")
+	# 记下是哪个槽 —— 地图种子由 槽号+层数 决定，这样"同一个存档每次一样、
+	# 换个存档就是新地图"
+	MineRun.entry_slot = _save.current_slot if _save != null else 1
+	print("[矿洞] 第 ", MineRun.entry_day, " 天下矿（", MineRun.entry_slot, " 号槽，种子 ",
+		MineRun.level_seed(), "）")
 	get_tree().change_scene_to_file(mine_scene)
 	return true

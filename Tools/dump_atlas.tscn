@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Tools/dump_atlas.gd" id="1_dump"]
+
+[node name="DumpAtlas" type="Node"]
+script = ExtResource("1_dump")

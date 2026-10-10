@@ -14,10 +14,16 @@ class_name MineLevel extends Node2D
 
 const TILE_SIZE: int = 18
 
-## 图集格子（18×18，已画网格确认过）
+## 图集格子（18×18）。**这几格是放大图集逐个看过的，不是猜的。**
 const ATLAS_SOLID_TOP := Vector2i(0, 2)   # 带高光的土层表面
 const ATLAS_SOLID_FILL := Vector2i(4, 0)  # 纯土，用于地表以下
-const ATLAS_PLATFORM := Vector2i(12, 0)   # 木板平台
+## ⚠️ 平台这一格是**试出来的**，两次踩坑记在这里：
+##    ① 原来用 (12,0) —— 那其实是**红白警戒带**，渲染出来是一条红橙条纹，不是木板。
+##    ② 改用 (11,1) —— 放大图集看那块"木板"，结果**那一格是透明的**，平台整个消失。
+##    最后用 (4,0)：地下纯土。它**已经被我亲眼确认过渲染正常**（矿洞地表以下就是它），
+##    读作"土台子"，而且和地表那层浅色高光区分得开。
+##    结论：挑图集格子，**看不清就放大看，改完一定截图确认**，别靠描述猜。
+const ATLAS_PLATFORM := Vector2i(4, 0)
 
 const SOLID := "#"
 const PLATFORM := "="
@@ -232,10 +238,18 @@ func torch_ratio() -> float:
 		return 0.0
 	return clampf(MineRun.torch_left / MineRun.TORCH_TIME, 0.0, 1.0)
 
-## 当前实际用的地图：显式设过 `map` 就用它，否则按当前层数取。
+## 用**程序化生成**的地图（关掉就退回下面手写的那几张，方便对照调试）
+@export var use_generated_map: bool = true
+
+## 当前实际用的地图，优先级：
+##   1. 显式设过 `map`（测试用自定义小地图时走这条）
+##   2. 程序化生成（种子 = 存档槽号 + 层数）
+##   3. 手写的兜底地图
 func active_map() -> PackedStringArray:
 	if map.size() > 0:
 		return map
+	if use_generated_map:
+		return MineGen.generate(MineRun.level_seed())
 	return MAPS[clampi(MineRun.depth - 1, 0, MAPS.size() - 1)]
 
 ## 把 active_map() 铺成瓦片。返回出生点的格子坐标。
