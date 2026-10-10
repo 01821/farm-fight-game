@@ -189,11 +189,31 @@ func _on_enemy_died(enemy: MineEnemy) -> void:
 		_spawn_drop(MinePickup.Kind.ORE, -1, from)
 		print("[矿洞] ", enemy.display_name(), " 还掉了一块矿石！")
 
+## 关底 Boss 的**独特掉落**。
+## 为什么要这个：原来是"打完给 30 金"，太薄 —— 玩家拆完一台大机械，
+## 拿到的只是钱，而钱在农场种两天就有了。现在每一层的关底第一次被拆时
+## 掉一件**只有它能给**的装备，这才是"打 Boss 的动力"。
+## 只在第一次给：第二次拆同一层不会重复弹，它是个"时刻"而不是刷装备的点。
+func _award_boss_unique() -> void:
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	if farm == null:
+		return
+	var id: String = ItemData.boss_drop(MineRun.depth)
+	if id == "":
+		return
+	if farm.has_item(id):
+		print("[矿洞] ", ItemData.name_of(id), " 已经拆过一个了")
+		return
+	farm.add_item(id, 1)
+	MineRun.pending_unique = id
+	print("[矿洞] ★ 拆到独特装备：", ItemData.name_of(id), " —— ", ItemData.desc_of(id))
+
 ## 关底被拆：掉一大笔，并记进这趟战绩
 func _on_boss_died(boss: MineEnemy) -> void:
 	MineRun.add_kill()
 	MineRun.boss_down = true
 	print("[矿洞] ", boss.display_name(), " 被拆了！矿洞清净了")
+	_award_boss_unique()
 	if pickup_scene == null or not is_instance_valid(boss):
 		return
 	var origin: Vector2 = boss.global_position + Vector2(0, -20)

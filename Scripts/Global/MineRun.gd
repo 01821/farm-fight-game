@@ -43,6 +43,8 @@ var last_boss_day: int = -1
 var entry_day: int = 0
 ## 进洞时用的是第几号存档槽（决定地图种子）
 var entry_slot: int = 1
+## 这趟拆到的那件独特装备 id（给结算提示用，没拆到就是空串）
+var pending_unique: String = ""
 ## 每日首通关底的额外奖励
 const DAILY_FIRST_GOLD: int = 30
 

@@ -20,6 +20,7 @@ extends CanvasLayer
 @onready var stat_title: Label = $StatTitle
 @onready var stat_body: Label = $StatBody
 @onready var goal_label: Label = $GoalLabel
+@onready var equip_label: Label = $EquipLabel
 @onready var perk_backdrop: ColorRect = $PerkBackdrop
 @onready var perk_title: Label = $PerkTitle
 @onready var perk_option1: Label = $PerkOption1
@@ -126,6 +127,12 @@ func _process(_delta: float) -> void:
 		Progression.level_of(Progression.Skill.FARM),
 		Progression.level_of(Progression.Skill.COMBAT),
 		Progression.level_of(Progression.Skill.TRADE)
+	]
+	# ⚠️ 装备**必须单独一行**。塞进 held_label 的尾巴上会被屏幕右边切掉
+	#    （"装备:" 三个字之后什么都没了）—— 这是截图看出来的，测试量不出来。
+	equip_label.text = "装备: %s   伤害+%d 减伤%d 血+%d" % [
+		player.equipment_line(), player.total_damage_bonus(),
+		player.total_defense(), player.total_hp_bonus()
 	]
 	key_label.text = "[1-5]选作物 [Q]切换 [F]使用 [F5]存 [F9]读 [Y]统计"
 

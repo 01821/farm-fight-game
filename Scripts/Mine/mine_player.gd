@@ -269,6 +269,31 @@ func switch_weapon() -> int:
 	weapon_changed.emit(weapon_id)
 	return weapon_id
 
+## ⚠️ `MAX_HP` 是**基础值**，别直接拿它当上限用 —— 装备（饰品）会加最大生命。
+##    凡是"封顶到上限"的地方都要走 `max_hp()`，否则装备加的血永远填不满。
+func max_hp() -> int:
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	if farm == null:
+		return MAX_HP
+	return maxi(1, MAX_HP + farm.total_hp_bonus())
+
+## 这一刀的伤害 = 当前武器 + 装备加成。
+func attack_damage() -> int:
+	var w := MineCombatData.get_weapon(weapon_id)
+	var base: int = int(w.get("damage", 1))
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	if farm == null:
+		return base
+	return maxi(1, base + farm.total_damage_bonus())
+
+## 技能伤害 = 技能基础 + 装备加成（和普攻一个路子）
+func skill_damage(s: Dictionary) -> int:
+	var base: int = int(s.get("damage", 1))
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	if farm == null:
+		return base
+	return maxi(1, base + farm.total_damage_bonus())
+
 func _apply_weapon() -> void:
 	var w := MineCombatData.get_weapon(weapon_id)
 	_reach = float(w["reach"])
@@ -293,7 +318,7 @@ func attack() -> int:
 	slash.scale = Vector2(float(facing) * 0.55, 0.55)
 	slash.modulate = Color(1, 1, 1, 0.95)
 
-	var dmg: int = int(w["damage"])
+	var dmg: int = attack_damage()
 	var knock: float = float(w["knock"])
 	var hit: int = 0
 	for body in attack_box.get_overlapping_bodies():
@@ -335,11 +360,11 @@ func use_potion(id: int) -> bool:
 	var before_en: float = energy
 	match id:
 		Potion.HEAL:
-			hp = mini(hp + HEAL_AMOUNT, MAX_HP)
+			hp = mini(hp + HEAL_AMOUNT, max_hp())
 		Potion.ENERGY:
 			energy = minf(energy + float(ENERGY_AMOUNT), float(MineCombatData.ENERGY_MAX))
 		Potion.POWER:
-			hp = MAX_HP
+			hp = max_hp()
 			energy = float(MineCombatData.ENERGY_MAX)
 	Sfx.play("buy")
 	print("[矿洞] 用了 ", String(POTION_INFO[id]["name"]),
@@ -351,11 +376,11 @@ func use_potion(id: int) -> bool:
 func _potion_has_effect(id: int) -> bool:
 	match id:
 		Potion.HEAL:
-			return hp < MAX_HP
+			return hp < max_hp()
 		Potion.ENERGY:
 			return energy < float(MineCombatData.ENERGY_MAX)
 		Potion.POWER:
-			return hp < MAX_HP or energy < float(MineCombatData.ENERGY_MAX)
+			return hp < max_hp() or energy < float(MineCombatData.ENERGY_MAX)
 	return false
 
 func can_use_potion(id: int) -> bool:
@@ -404,7 +429,7 @@ func cast_skill(id: int) -> bool:
 func _skill_heavy(s: Dictionary) -> void:
 	var size := Vector2(float(s["reach"]), float(s["box_height"]))
 	var center := Vector2(float(facing) * float(s["reach"]) * 0.5, BOX_CENTER_Y)
-	var dmg: int = int(s["damage"])
+	var dmg: int = skill_damage(s)
 	var n: int = 0
 	for e in query_rect(size, center):
 		e.take_damage(dmg, global_position, 240.0)
@@ -416,7 +441,7 @@ func _skill_heavy(s: Dictionary) -> void:
 func _skill_spin(s: Dictionary) -> void:
 	var r: float = float(s["radius"])
 	var size := Vector2(r * 2.0, r * 2.0)
-	var dmg: int = int(s["damage"])
+	var dmg: int = skill_damage(s)
 	var n: int = 0
 	for e in query_rect(size, Vector2(0, BOX_CENTER_Y)):
 		e.take_damage(dmg, global_position, 200.0)
@@ -447,7 +472,7 @@ func _dash_damage_touch() -> void:
 func _skill_heal(s: Dictionary) -> void:
 	var amount: int = int(s["heal"])
 	var before: int = hp
-	hp = mini(hp + amount, MAX_HP)
+	hp = mini(hp + amount, max_hp())
 	print("[矿洞] 治疗 ", hp - before, " 点（", before, " -> ", hp, "）")
 
 # --- 判定辅助 ---
@@ -492,7 +517,12 @@ func spawn_damage_number(amount: int, at: Vector2) -> void:
 func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
 	if _invuln > 0.0 or hp <= 0 or amount <= 0:
 		return false
-	hp = maxi(0, hp - amount)
+	# 护甲减伤。**至少掉 1 点** —— 否则堆够护甲就无敌了，
+	# 那比"挨打疼"更糟：玩家会发现躲不躲都一样。
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	var cut: int = farm.total_defense() if farm != null else 0
+	var real: int = maxi(1, amount - cut)
+	hp = maxi(0, hp - real)
 	_invuln = INVULN_TIME
 	Sfx.play("hurt")
 	shake(SHAKE_HURT, SHAKE_HURT_TIME)
@@ -501,8 +531,9 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
 		if absf(dx) < 0.01:
 			dx = -float(facing)
 		velocity = Vector2(dx * HURT_KNOCKBACK_X, HURT_KNOCKBACK_Y)
-	print("[矿洞] 玩家掉血 ", amount, "，剩 ", hp, "/", MAX_HP)
-	damaged.emit(amount)
+	print("[矿洞] 玩家掉血 ", real, "（原 ", amount, "，护甲挡 ", amount - real, "），剩 ",
+		hp, "/", max_hp())
+	damaged.emit(real)
 	if hp <= 0:
 		shake(SHAKE_DEATH, SHAKE_DEATH_TIME)
 		print("[矿洞] 玩家倒下了")

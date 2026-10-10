@@ -1068,6 +1068,16 @@ theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 vertical_alignment = 1
 
+; 装备单独一行 —— 塞进上一行会被屏幕右边切掉（截图看出来的）
+[node name="EquipLabel" type="Label" parent="HUD"]
+offset_left = 8.0
+offset_top = 80.0
+offset_right = 392.0
+offset_bottom = 98.0
+theme_override_colors/font_color = Color(0.72, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "装备: 空手"
+
 ; 当前目标：常驻显示，一环接一环的那一环。
 ; 放在**底部**而不是顶部 —— 顶部四条已经是"状态"了，目标单独一条放底下，
 ; 玩家一眼能分清"我现在怎么样"和"我该干什么"。

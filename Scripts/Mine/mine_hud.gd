@@ -175,8 +175,16 @@ func _refresh_status() -> void:
 	var cost_txt: String = ""
 	if _player.is_dashing():
 		cost_txt = "   冲刺中"
-	status_label.text = "能量 %d/%d    武器 %s [L]切换%s" % [
-		int(_player.energy), MineCombatData.ENERGY_MAX, _player.weapon_name(), cost_txt
+	# 装备也显示出来 —— 玩家得知道身上那件到底在不在生效
+	var farm := get_tree().get_first_node_in_group("player") as Player
+	var gear: String = ""
+	if farm != null:
+		gear = "    装备 %s（伤害+%d 减伤%d +%d血）" % [
+			farm.equipment_line(), farm.total_damage_bonus(),
+			farm.total_defense(), farm.total_hp_bonus()
+		]
+	status_label.text = "能量 %d/%d    武器 %s [L]切换%s%s" % [
+		int(_player.energy), MineCombatData.ENERGY_MAX, _player.weapon_name(), cost_txt, gear
 	]
 	# 火把 + 这趟的收获
 	var torch: float = MineRun.torch_left

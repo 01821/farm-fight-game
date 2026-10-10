@@ -54,6 +54,88 @@ var total_planted: int = 0
 ## 累计浇过几次水
 var total_watered: int = 0
 
+## 背包：物品 id -> 数量
+var inventory: Dictionary = {}
+## 装备槽：ItemData.Slot -> 物品 id（空串 = 没装）
+var equipped: Dictionary = {}
+
+# --- 背包 ---
+
+func add_item(id: String, n: int = 1) -> bool:
+	if not ItemData.exists(id):
+		push_warning("没有这种物品：" + id)
+		return false
+	inventory[id] = int(inventory.get(id, 0)) + maxi(1, n)
+	# 第一次拿到的装备**自动穿上空槽** —— 玩家不用自己想起来去装
+	var slot: int = ItemData.slot_of(id)
+	if equipped.get(slot, "") == "":
+		equip(id)
+	return true
+
+func has_item(id: String) -> bool:
+	return int(inventory.get(id, 0)) > 0
+
+func item_count(id: String) -> int:
+	return int(inventory.get(id, 0))
+
+func take_item(id: String, n: int = 1) -> bool:
+	var have: int = item_count(id)
+	if have < n:
+		return false
+	if have == n:
+		inventory.erase(id)
+	else:
+		inventory[id] = have - n
+	return true
+
+# --- 装备 ---
+
+## 装上某件装备。返回是否真的换上了。
+func equip(id: String) -> bool:
+	if not ItemData.exists(id) or not has_item(id):
+		return false
+	var slot: int = ItemData.slot_of(id)
+	equipped[slot] = id
+	print("[装备] 装上 ", ItemData.name_of(id), "（", ItemData.slot_name(slot), "）")
+	return true
+
+func unequip(slot: int) -> void:
+	equipped.erase(slot)
+
+func equipped_id(slot: int) -> String:
+	return String(equipped.get(slot, ""))
+
+func equipped_name(slot: int) -> String:
+	var id: String = equipped_id(slot)
+	return ItemData.name_of(id) if id != "" else "无"
+
+## 把所有装备的某一项加成加起来（key 是 dmg / def / hp）
+func equip_bonus(key: String) -> int:
+	var sum: int = 0
+	for slot in equipped.keys():
+		var id: String = String(equipped[slot])
+		if id != "":
+			sum += int(ItemData.get_item(id).get(key, 0))
+	return sum
+
+func total_damage_bonus() -> int:
+	return equip_bonus("dmg")
+
+func total_defense() -> int:
+	return equip_bonus("def")
+
+func total_hp_bonus() -> int:
+	return equip_bonus("hp")
+
+## 装备栏的一行摘要（HUD 和测试都读这个）
+func equipment_line() -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	for slot in range(ItemData.SLOT_NAMES.size()):
+		var id: String = equipped_id(slot)
+		if id != "":
+			parts.append(ItemData.name_of(id))
+	return " / ".join(parts) if parts.size() > 0 else "空手"
+
 ## 当前重叠的水源数量（站在水源旁自动补水）
 var _water_source_count: int = 0
 var _attack_cd: float = 0.0
@@ -295,6 +377,7 @@ func to_save_data() -> Dictionary:
 		"processed_value": processed_value, "total_processed": total_processed,
 		"total_earned": total_earned,
 		"total_planted": total_planted, "total_watered": total_watered,
+		"inventory": inventory.duplicate(), "equipped": equipped.duplicate(),
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -313,6 +396,18 @@ func apply_save_data(d: Dictionary) -> void:
 	total_earned = maxi(0, int(d.get("total_earned", 0)))
 	total_planted = maxi(0, int(d.get("total_planted", 0)))
 	total_watered = maxi(0, int(d.get("total_watered", 0)))
+	# 存档是权威：先清空再读，免得旧档里没有这两个字段时留着上一局的装备
+	inventory.clear()
+	var inv: Variant = d.get("inventory", {})
+	if typeof(inv) == TYPE_DICTIONARY:
+		for k in (inv as Dictionary).keys():
+			inventory[String(k)] = int((inv as Dictionary)[k])
+	equipped.clear()
+	var eq: Variant = d.get("equipped", {})
+	if typeof(eq) == TYPE_DICTIONARY:
+		for k in (eq as Dictionary).keys():
+			# JSON 读回来键是字符串，统一转成 int 槽号
+			equipped[int(k)] = String((eq as Dictionary)[k])
 	_read_counts(d.get("seeds", null), seeds)
 	_read_counts(d.get("harvested", null), harvested)
 	global_position = Vector2(
