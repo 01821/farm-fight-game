@@ -47,6 +47,11 @@ func _settle_previous_run() -> void:
 		if gold > 0:
 			player.earn(gold)
 			Sfx.play("coin")
+		# 矿石也带回农场 —— 它是"矿洞 → 加工坊 → 装备 → 打更深的矿"
+		# 这条循环里唯一的实物，光带钱回来是不够的。
+		if ore > 0:
+			player.ore += ore
+			print("[矿洞] 矿石入袋：", player.ore, " 块")
 		# 每日首通：今天第一次拆掉关底，额外再给一笔
 		var bonus: int = MineRun.claim_daily()
 		if bonus > 0:

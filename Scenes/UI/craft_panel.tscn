@@ -1,0 +1,116 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/craft_panel.gd" id="1_craft"]
+
+; 加工坊配方台。整块预建，脚本只刷文字和可点状态。
+; 六行对应 RecipeData.LIST 的六条配方（配方数是写死的常量，所以可以预建）。
+[node name="CraftPanel" type="CanvasLayer"]
+layer = 90
+script = ExtResource("1_craft")
+
+; ⚠️ 面板要**整屏**。原来左右各留了 40px，框外的 HUD 文字就露出来了 ——
+;    "金币"、"手持:"、"装备" 全在边上，看着像 HUD 画到了面板上面。
+;    （是截图看出来的；测试量不出来，因为文字内容是完整的。）
+[node name="Backdrop" type="ColorRect" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.06, 0.06, 0.1, 0.96)
+
+[node name="Title" type="Label" parent="."]
+visible = false
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 360.0
+offset_bottom = 60.0
+theme_override_colors/font_color = Color(1, 0.93, 0.62, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "加工坊 —— 点一行做一件"
+
+[node name="Rows" type="Node" parent="."]
+
+[node name="Row0" type="Button" parent="Rows"]
+visible = false
+offset_left = 52.0
+offset_top = 72.0
+offset_right = 348.0
+offset_bottom = 94.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+flat = true
+
+[node name="Row1" type="Button" parent="Rows"]
+visible = false
+offset_left = 52.0
+offset_top = 100.0
+offset_right = 348.0
+offset_bottom = 122.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+flat = true
+
+[node name="Row2" type="Button" parent="Rows"]
+visible = false
+offset_left = 52.0
+offset_top = 128.0
+offset_right = 348.0
+offset_bottom = 150.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+flat = true
+
+[node name="Row3" type="Button" parent="Rows"]
+visible = false
+offset_left = 52.0
+offset_top = 156.0
+offset_right = 348.0
+offset_bottom = 178.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+flat = true
+
+[node name="Row4" type="Button" parent="Rows"]
+visible = false
+offset_left = 52.0
+offset_top = 184.0
+offset_right = 348.0
+offset_bottom = 206.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+flat = true
+
+[node name="Row5" type="Button" parent="Rows"]
+visible = false
+offset_left = 52.0
+offset_top = 212.0
+offset_right = 348.0
+offset_bottom = 234.0
+theme_override_colors/font_hover_color = Color(1, 0.94, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+flat = true
+
+[node name="Status" type="Label" parent="."]
+visible = false
+offset_left = 40.0
+offset_top = 246.0
+offset_right = 360.0
+offset_bottom = 270.0
+theme_override_colors/font_color = Color(0.75, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="."]
+visible = false
+offset_left = 40.0
+offset_top = 246.0
+offset_right = 360.0
+offset_bottom = 270.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1

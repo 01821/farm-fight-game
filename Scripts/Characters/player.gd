@@ -53,6 +53,11 @@ var total_earned: int = 0
 var total_planted: int = 0
 ## 累计浇过几次水
 var total_watered: int = 0
+## 矿石：从矿洞背回来的那条线的产出。**这是农场和矿洞之间唯一真正的"物流"** ——
+## 没有它，两条线就还是各玩各的（各自只能换钱，钱只能买种子）。
+var ore: int = 0
+## 累计加工出几件东西
+var total_crafted: int = 0
 
 ## 背包：物品 id -> 数量
 var inventory: Dictionary = {}
@@ -378,6 +383,7 @@ func to_save_data() -> Dictionary:
 		"total_earned": total_earned,
 		"total_planted": total_planted, "total_watered": total_watered,
 		"inventory": inventory.duplicate(), "equipped": equipped.duplicate(),
+		"ore": ore, "total_crafted": total_crafted,
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -396,6 +402,8 @@ func apply_save_data(d: Dictionary) -> void:
 	total_earned = maxi(0, int(d.get("total_earned", 0)))
 	total_planted = maxi(0, int(d.get("total_planted", 0)))
 	total_watered = maxi(0, int(d.get("total_watered", 0)))
+	ore = maxi(0, int(d.get("ore", 0)))
+	total_crafted = maxi(0, int(d.get("total_crafted", 0)))
 	# 存档是权威：先清空再读，免得旧档里没有这两个字段时留着上一局的装备
 	inventory.clear()
 	var inv: Variant = d.get("inventory", {})

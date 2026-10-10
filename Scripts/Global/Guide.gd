@@ -117,7 +117,9 @@ func _condition_met(id: String) -> bool:
 		"goods_1":
 			return player.total_goods >= 1
 		"process_1":
-			return player.total_processed >= 1
+			# 加工坊现在是配方台（做装备），批量卖作物那条路也还在，
+			# 两条路都算"用过加工坊"
+			return player.total_processed >= 1 or player.total_crafted >= 1
 		"upgrade_1":
 			return Upgrades.has_any()
 	return false

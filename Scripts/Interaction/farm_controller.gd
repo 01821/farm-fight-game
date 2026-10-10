@@ -68,8 +68,15 @@ func use_held_item() -> bool:
 	# 矿洞口优先：站上去按 F 就下矿（和手持什么都无关）
 	if mine_entrance != null and mine_entrance.is_player_inside():
 		return mine_entrance.enter_mine()
-	# 加工坊：站着按 F 就把篮里的生作物做成成品（也和手持什么无关）
+	# 加工坊：站着按 F 打开**配方台**（矿石 + 作物 + 金币 → 装备）。
+	# 原来这里只是"把篮里的生作物 ×2 换成钱"，那跟矿洞毫无关系；
+	# 现在它是把两条线咬合起来的那个地方。批量卖作物仍然保留（process_crops），
+	# 只是不再占着 F 键 —— 配方台里点一行就做一件。
 	if mill != null and mill.is_player_inside():
+		var panel := get_tree().get_first_node_in_group("craft_panel") as CraftPanel
+		if panel != null:
+			panel.set_open(not panel.is_open)
+			return true
 		return mill.process_crops(player) > 0
 	# 站在商店里，交易优先
 	if market.is_player_inside():

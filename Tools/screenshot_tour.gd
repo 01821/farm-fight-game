@@ -73,6 +73,18 @@ func _shot_farm() -> void:
 		await _grab("farm_stats")
 		hud.stats_open = false
 		await _step(4)
+
+	# 配方台：给足料，让六行都亮着 —— 顺便检查有没有哪行文字长到被切掉
+	var panel := _level.get_node_or_null("CraftPanel")
+	if panel != null:
+		player.money = 9999
+		player.ore = 99
+		player.harvested = [9, 9, 9]
+		panel.set_open(true)
+		await _step(SETTLE)
+		await _grab("craft_panel")
+		panel.set_open(false)
+		await _step(4)
 	_level.queue_free()
 	await _step(6)
 

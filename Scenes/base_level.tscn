@@ -22,6 +22,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/buildings/mine_entrance.tscn" id="18_mine"]
 [ext_resource type="PackedScene" path="res://Scenes/buildings/mill.tscn" id="19_mill"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/pause_menu.tscn" id="20_pause"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/craft_panel.tscn" id="21_craft"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -1121,6 +1122,8 @@ theme_override_font_sizes/font_size = 12
 script = ExtResource("11_fctl")
 
 [node name="PauseMenu" parent="." instance=ExtResource("20_pause")]
+
+[node name="CraftPanel" parent="." instance=ExtResource("21_craft")]
 
 [node name="NightTint" type="CanvasModulate" parent="."]
 
