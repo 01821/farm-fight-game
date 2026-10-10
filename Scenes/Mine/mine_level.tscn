@@ -30,10 +30,16 @@ texture_region_size = Vector2i(18, 18)
 0:0/0 = 0
 0:2/0 = 0
 4:0/0 = 0
+5:0/0 = 0
 12:0/0 = 0
 0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, 9, -9, 9)
 0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, 9, -9, 9)
 4:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, 9, -9, 9)
+; ⚠️ 平台**必须用一个单独的图集格**（5:0，也是土块），不能和「实心填充」(4:0) 共用 ——
+;    物理多边形是按图集坐标写死的，同一格只能有一份物理，共用就会让平台变成整格实心。
+;    （我把 ATLAS_PLATFORM 改成 4:0 试过，test_mine 当场挂了 7 条。）
+5:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, -3, -9, -3)
+5:0/0/physics_layer_0/polygon_0/one_way = true
 12:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-9, -9, 9, -9, 9, -3, -9, -3)
 12:0/0/physics_layer_0/polygon_0/one_way = true
 

@@ -565,13 +565,14 @@ func _ready() -> void:
 	_player.seed_type = 0
 	_player.seeds[0] = 5
 	var planted_ok: bool = _land.try_plant_at(tiles4[0])
+	# ⚠️ **不要在两件事中间 await** —— 种下和浇水之间隔了几帧，
+	#    中间那一小段里作物的状态可能被别的东西改掉（喷水器/生长计时），
+	#    于是"浇上了"就会偶发失败（三遍里挂过一次）。
+	var watered_ok: bool = _land.water_plant_at(tiles4[0])
 	await _step(3)
 	print("  INFO try_plant_at = ", planted_ok, "，total_planted = ", _player.total_planted)
 	_check("种下去了", planted_ok)
 	_check("种一株就 +1", _player.total_planted == 1)
-	_player.water_left = 10
-	var watered_ok: bool = _land.water_plant_at(tiles4[0])
-	await _step(3)
 	print("  INFO water_plant_at = ", watered_ok, "，total_watered = ", _player.total_watered)
 	_check("浇上了", watered_ok)
 	_check("浇一次就 +1", _player.total_watered == 1)
