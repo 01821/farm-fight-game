@@ -68,8 +68,17 @@ func sell_crops(player: Player) -> bool:
 			detail += "、"
 		detail += "%s x%d" % [AnimalProduct.GOODS_NAME, goods]
 		player.animal_goods = 0
+	# 加工品：价值直接记账，不分类别
+	if player.has_processed():
+		var pv: int = player.processed_value
+		base_total += pv
+		count += 1
+		if detail != "":
+			detail += "、"
+		detail += "%s（值 %d）" % [Mill.PRODUCT_NAME, pv]
+		player.processed_value = 0
 	if count <= 0:
-		print("[商店] 篮子是空的，先去收获作物或者收畜产")
+		print("[商店] 篮子是空的，先去收获作物 / 收畜产 / 加工")
 		return false
 	var total: int = int(round(float(base_total) * Progression.sell_multiplier()))
 	player.money += total

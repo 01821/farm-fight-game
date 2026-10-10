@@ -139,5 +139,87 @@ func _ready() -> void:
 	_check("读档读回累计畜产", _player.total_goods == 9)
 	_check("收获篮总数把畜产也算进去了", _player.basket_total() >= 3)
 
+	print("--- 加工坊：生的做成成品，价值翻倍 ---")
+	var mill := _level.get_node_or_null("level/Static/Mill") as Mill
+	_check("农场里摆了加工坊", mill != null)
+
+	# ★ 和矿洞口一样的守门断言：建筑不能压在农田上，
+	#   否则站在那格按 F 会被建筑分支抢走、种不了地（真踩过）。
+	var land := _level.get_node("Land") as FarmLand
+	var clash: int = 0
+	var nearest: float = INF
+	for c in land.get_used_cells():
+		if not land.is_farmland(c):
+			continue
+		var w: Vector2 = land.to_global(land.map_to_local(c))
+		var dd: float = w.distance_to(mill.global_position)
+		nearest = minf(nearest, dd)
+		if dd < 30.0:
+			clash += 1
+	print("  INFO 加工坊离最近的农田 ", snappedf(nearest, 0.1), " px")
+	_check("加工坊没有压在任何农田上", clash == 0)
+
+	if mill != null:
+		var p3 := _player
+		p3.harvested = [0, 0, 0, 0, 0]
+		p3.processed_value = 0
+		_check("篮子空的时候加工不了", mill.process_crops(p3) == 0)
+
+		# 放两株 0 号作物进去
+		p3.harvested[0] = 2
+		var raw: int = 2 * CropData.sell_price(0)
+		var gain_preview: int = mill.preview_gain(p3)
+		print("  INFO 2 株 ", CropData.name_of(0), " 生卖 ", raw, " 金，加工后多赚 ", gain_preview)
+		_check("预览能算出多赚多少", gain_preview == int(round(float(raw) * Mill.MULTIPLIER)) - raw)
+
+		var made: int = mill.process_crops(p3)
+		print("  INFO 加工产出价值 ", made, "（生卖只有 ", raw, "）")
+		_check("加工产出比生卖多", made > raw)
+		_check("正好是倍率关系", made == int(round(float(raw) * Mill.MULTIPLIER)))
+		_check("生作物被消耗掉了", p3.harvested[0] == 0)
+		_check("成品的价值记在玩家身上", p3.processed_value == made)
+		_check("加工完就不能再加工一次了", mill.process_crops(p3) == 0)
+
+		print("--- 加工品也在商店卖 ---")
+		var money1: int = p3.money
+		var pv: int = p3.processed_value
+		p3.global_position = _market.global_position
+		await _step(4)
+		var ok3: bool = _market.sell_crops(p3)
+		await _step(2)
+		print("  INFO 卖加工品：", money1, " → ", p3.money, "（成品值 ", pv, "）")
+		_check("加工品卖得掉", ok3)
+		_check("加工品清空了", p3.processed_value == 0)
+		_check("★ 钱真的进账了", p3.money >= money1 + pv)
+
+	print("--- 三条收入线一起卖 ---")
+	_player.money = 0
+	_player.harvested = [0, 0, 0, 0, 0]
+	_player.harvested[0] = 1              # 作物
+	_player.animal_goods = 1              # 畜产
+	_player.processed_value = 20          # 加工品
+	var expected: int = CropData.sell_price(0) + AnimalProduct.PRICE + 20
+	_player.global_position = _market.global_position
+	await _step(4)
+	var ok4: bool = _market.sell_crops(_player)
+	await _step(2)
+	print("  INFO 一次卖出三条线的货，进账 ", _player.money, "（预期至少 ", expected, "）")
+	_check("一次全卖掉", ok4)
+	_check("三条线的钱都算上了", _player.money >= expected)
+	_check("三样都清空了",
+		_player.harvested[0] == 0 and _player.goods_total() == 0 and _player.processed_value == 0)
+
+	print("--- 加工品要能存档 ---")
+	_player.processed_value = 33
+	_player.total_processed = 77
+	var pd2: Dictionary = _player.to_save_data()
+	_check("存档里记了成品的价值", int(pd2.get("processed_value", -1)) == 33)
+	_check("存档里记了累计加工值", int(pd2.get("total_processed", -1)) == 77)
+	_player.processed_value = 0
+	_player.total_processed = 0
+	_player.apply_save_data(pd2)
+	_check("读档读回成品价值", _player.processed_value == 33)
+	_check("读档读回累计加工值", _player.total_processed == 77)
+
 	print("RESULT fail=", _fail)
 	get_tree().quit()

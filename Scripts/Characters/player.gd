@@ -42,6 +42,11 @@ var total_kills: int = 0
 var animal_goods: int = 0
 ## 累计收过多少畜产（统计用，只增不减）
 var total_goods: int = 0
+## 篮子里**加工品**的总价值。加工品不分类别，只记值多少钱 ——
+## 这样不用为每种作物单独做一套成品图标和数据。
+var processed_value: int = 0
+## 累计加工出来的总价值（统计用）
+var total_processed: int = 0
 
 ## 当前重叠的水源数量（站在水源旁自动补水）
 var _water_source_count: int = 0
@@ -185,6 +190,16 @@ func add_goods(n: int = 1) -> void:
 func goods_total() -> int:
 	return animal_goods
 
+## 加工坊做出来的成品（价值记账，不分类别）
+func add_processed(value: int) -> void:
+	if value <= 0:
+		return
+	processed_value += value
+	total_processed += value
+
+func has_processed() -> bool:
+	return processed_value > 0
+
 func add_harvest(type_id: int, n: int = 1) -> void:
 	if not CropData.is_valid(type_id):
 		return
@@ -261,6 +276,7 @@ func to_save_data() -> Dictionary:
 		"seed_type": seed_type, "active_item": active_item,
 		"total_harvested": total_harvested, "total_kills": total_kills,
 		"animal_goods": animal_goods, "total_goods": total_goods,
+		"processed_value": processed_value, "total_processed": total_processed,
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -274,6 +290,8 @@ func apply_save_data(d: Dictionary) -> void:
 	total_kills = maxi(0, int(d.get("total_kills", 0)))
 	animal_goods = maxi(0, int(d.get("animal_goods", 0)))
 	total_goods = maxi(0, int(d.get("total_goods", 0)))
+	processed_value = maxi(0, int(d.get("processed_value", 0)))
+	total_processed = maxi(0, int(d.get("total_processed", 0)))
 	_read_counts(d.get("seeds", null), seeds)
 	_read_counts(d.get("harvested", null), harvested)
 	global_position = Vector2(

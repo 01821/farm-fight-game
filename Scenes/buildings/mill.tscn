@@ -1,0 +1,34 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/buildings/mill.gd" id="1_mill"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_tiny-farm/Tilemap/tilemap_packed.png" id="2_farm"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_mill"]
+radius = 26.0
+
+; 加工坊：一栋谷仓。用的是农场自己的素材包（kenney_tiny-farm，16×16 格子），
+; 取底部那几格拼出一间 3×2 的屋子。
+[node name="Mill" type="Node2D"]
+script = ExtResource("1_mill")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -16)
+texture = ExtResource("2_farm")
+region_enabled = true
+region_rect = Rect2(48, 112, 48, 32)
+
+; 玩家走近时亮起来的提示（平时隐藏）
+[node name="ActiveSprite" type="Sprite2D" parent="."]
+visible = false
+position = Vector2(0, -44)
+texture = ExtResource("2_farm")
+region_enabled = true
+region_rect = Rect2(160, 160, 16, 16)
+
+[node name="InteractionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+position = Vector2(0, -14)
+shape = SubResource("CircleShape2D_mill")

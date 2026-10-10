@@ -20,6 +20,7 @@
 [ext_resource type="Script" path="res://Scripts/Global/Weather.gd" id="16_weather"]
 [ext_resource type="Script" path="res://Scripts/Global/Achievements.gd" id="17_ach"]
 [ext_resource type="PackedScene" path="res://Scenes/buildings/mine_entrance.tscn" id="18_mine"]
+[ext_resource type="PackedScene" path="res://Scenes/buildings/mill.tscn" id="19_mill"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4rblm"]
 texture = ExtResource("2_5s04l")
@@ -940,6 +941,12 @@ position = Vector2(128, 184)
 ; (350,180) 离最近的一格农田约 38px。test_mine_run 里有一条断言专门守着这件事。
 [node name="MineEntrance" parent="level/Static" instance=ExtResource("18_mine")]
 position = Vector2(350, 180)
+
+; 加工坊。同样**必须离农田 30px 以上**（农田 x 248~312 / y 136~184），
+; 否则站在那格按 F 会被建筑分支抢走、种不了地。
+; (128,96) 离最近的农田格约 126px。
+[node name="Mill" parent="level/Static" instance=ExtResource("19_mill")]
+position = Vector2(128, 96)
 
 [node name="Animals" type="Node2D" parent="level" unique_id=2113591457]
 
