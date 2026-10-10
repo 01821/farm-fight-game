@@ -18,6 +18,9 @@ const GOLD_GOAL: int = 300
 
 var goal_reached: bool = false
 
+func _ready() -> void:
+	add_to_group("farm_controller")
+
 func current_day() -> int:
 	return cycle.day if cycle != null else 1
 

@@ -19,6 +19,7 @@ extends CanvasLayer
 @onready var stat_backdrop: ColorRect = $StatBackdrop
 @onready var stat_title: Label = $StatTitle
 @onready var stat_body: Label = $StatBody
+@onready var goal_label: Label = $GoalLabel
 @onready var perk_backdrop: ColorRect = $PerkBackdrop
 @onready var perk_title: Label = $PerkTitle
 @onready var perk_option1: Label = $PerkOption1
@@ -74,6 +75,22 @@ func _update_stats_panel() -> void:
 func stats_text() -> String:
 	return stat_body.text
 
+## 当前目标。**常驻显示**，做完了自动换下一条 —— 这就是"一环接一环"。
+func _update_goal() -> void:
+	if Guide.is_all_done():
+		goal_label.text = "目标：全部完成！(%d/%d)" % [Guide.count_done(), Guide.total()]
+		goal_label.add_theme_color_override("font_color", Color(0.7, 1, 0.75))
+		return
+	var hint: String = Guide.current_hint()
+	goal_label.text = "目标(%d/%d)：%s" % [Guide.count_done() + 1, Guide.total(), Guide.current_text()]
+	goal_label.add_theme_color_override("font_color", Color(1, 0.93, 0.62))
+	if hint != "":
+		goal_label.tooltip_text = hint
+
+## 目标文本（测试直接读）
+func goal_text() -> String:
+	return goal_label.text
+
 func _process(_delta: float) -> void:
 	# 所有浮层节点都是预建的，这里只切可见性和文本
 	var won: bool = controller.goal_reached
@@ -88,6 +105,7 @@ func _process(_delta: float) -> void:
 
 	_update_perk_panel()
 	_update_stats_panel()
+	_update_goal()
 
 	var phase := "%s %d 秒" % [cycle.phase_name(), ceili(cycle.phase_time_left())]
 	var sky: String = weather.sky_name() if weather != null else "晴天"

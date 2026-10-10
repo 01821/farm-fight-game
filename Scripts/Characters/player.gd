@@ -49,6 +49,10 @@ var processed_value: int = 0
 var total_processed: int = 0
 ## 生涯累计赚到的钱（**只增不减**，统计面板用；money 会因为买东西变少）
 var total_earned: int = 0
+## 累计种下几株（目标引导链要用）
+var total_planted: int = 0
+## 累计浇过几次水
+var total_watered: int = 0
 
 ## 当前重叠的水源数量（站在水源旁自动补水）
 var _water_source_count: int = 0
@@ -211,6 +215,14 @@ func add_harvest(type_id: int, n: int = 1) -> void:
 func register_kill() -> void:
 	total_kills += 1
 
+## 种下一株（目标引导链用）
+func register_plant() -> void:
+	total_planted += 1
+
+## 浇了一次水
+func register_water() -> void:
+	total_watered += 1
+
 ## 进账（卖作物、击杀赏金等）。目标判定由 FarmController 每帧读 money，这里不用通知谁。
 func earn(amount: int) -> void:
 	var got: int = maxi(0, amount)
@@ -282,6 +294,7 @@ func to_save_data() -> Dictionary:
 		"animal_goods": animal_goods, "total_goods": total_goods,
 		"processed_value": processed_value, "total_processed": total_processed,
 		"total_earned": total_earned,
+		"total_planted": total_planted, "total_watered": total_watered,
 		"pos_x": global_position.x, "pos_y": global_position.y,
 	}
 
@@ -298,6 +311,8 @@ func apply_save_data(d: Dictionary) -> void:
 	processed_value = maxi(0, int(d.get("processed_value", 0)))
 	total_processed = maxi(0, int(d.get("total_processed", 0)))
 	total_earned = maxi(0, int(d.get("total_earned", 0)))
+	total_planted = maxi(0, int(d.get("total_planted", 0)))
+	total_watered = maxi(0, int(d.get("total_watered", 0)))
 	_read_counts(d.get("seeds", null), seeds)
 	_read_counts(d.get("harvested", null), harvested)
 	global_position = Vector2(

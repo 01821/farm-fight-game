@@ -22,6 +22,7 @@ Sfx="*res://Scenes/global/sfx.tscn"
 Progression="*res://Scripts/Global/Progression.gd"
 MineRun="*res://Scripts/Global/MineRun.gd"
 Upgrades="*res://Scripts/Global/Upgrades.gd"
+Guide="*res://Scripts/Global/Guide.gd"
 
 [display]
 

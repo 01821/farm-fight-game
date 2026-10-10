@@ -448,5 +448,134 @@ func _ready() -> void:
 	_player.apply_save_data(ed)
 	_check("读档读回累计收入", _player.total_earned == 4321)
 
+	print("--- 目标引导链（一环接一环）---")
+	# 从零开始，别被前面的状态干扰
+	Guide.apply_save_data({})
+	Guide.player = null
+	Guide.controller = null
+	_player.total_planted = 0
+	_player.total_watered = 0
+	_player.total_harvested = 0
+	_player.total_earned = 0
+	_player.total_goods = 0
+	_player.total_processed = 0
+	MineRun.total_runs = 0
+	MineRun.total_boss = 0
+	Upgrades.levels = [0, 0, 0]
+	_ctl.goal_reached = false
+	await _step(3)
+
+	_check("引导链有 10 环", Guide.total() == 10)
+	_check("一开始一环都没完成", Guide.count_done() == 0)
+	_check("没全部完成", not Guide.is_all_done())
+	print("  INFO 当前目标：", Guide.current_text())
+	print("  INFO 提示：", Guide.current_hint())
+	_check("第一个目标是种 3 株作物", "种" in Guide.current_text())
+	_check("每一条都带提示（玩家不会卡住）", Guide.current_hint() != "")
+	_check("★ 自动加载单例也能找到玩家（不是靠相对路径）", Guide._try_resolve())
+
+	print("--- HUD 常驻显示当前目标 ---")
+	var hud2 := _level.get_node("HUD")
+	await _step(3)
+	print("  INFO ", hud2.goal_text())
+	_check("HUD 上显示目标", "目标" in hud2.goal_text())
+	_check("HUD 上写了进度 1/10", "1/10" in hud2.goal_text())
+
+	print("--- 一环接一环：按顺序推进 ---")
+	# 只把第 1 条做够，第 2 条不该跳过去
+	_player.total_planted = 2
+	await _step(3)
+	_check("差一点就不算完成", Guide.count_done() == 0)
+	_player.total_planted = 3
+	await _step(3)
+	print("  INFO 种够 3 株之后：完成 ", Guide.count_done(), " 环，当前 ", Guide.current_text())
+	_check("做够了就完成第 1 环", Guide.has("plant_3"))
+	# ⚠️ 别断言 "浇水" —— 文案是"给作物**浇一次**水"，中间夹了字，
+	#    连续的"浇水"根本不存在。断言子串时要盯着真实文案。（踩过）
+	_check("自动换到第 2 环", "浇" in Guide.current_text())
+	_check("弹了提示", Guide.toast_visible())
+	print("  INFO 提示文字：", Guide.toast_text())
+	_check("提示里有『下一个』", "下一个" in Guide.toast_text())
+
+	# 第 2 环没做完，第 3 环的达成条件满足了也不该跳
+	_player.total_harvested = 99
+	await _step(3)
+	_check("★ 上一环没做完，后面的不会跳着完成", not Guide.has("harvest_1"))
+	_check("仍然卡在第 2 环", "浇" in Guide.current_text())
+
+	_player.total_watered = 1
+	await _step(3)
+	_check("浇了水就过第 2 环", Guide.has("water_1"))
+	_check("并且立刻推进到第 3 环", "收获" in Guide.current_text())
+	await _step(3)
+	_check("第 3 环的收获条件已经满足了，这一帧补上", Guide.has("harvest_1"))
+
+	print("--- 链子把农场和矿洞串起来了 ---")
+	var ids: Array[String] = []
+	for e in Guide.LIST:
+		ids.append(String(e.get("id", "")))
+	print("  INFO 整条链：", " → ".join(ids))
+	_check("链子里有农场的事", ids.has("plant_3") and ids.has("sell_1"))
+	_check("链子里有矿洞的事", ids.has("mine_1") and ids.has("boss_1"))
+	_check("链子里有畜产", ids.has("goods_1"))
+	_check("链子里有加工", ids.has("process_1"))
+	_check("链子里有升级", ids.has("upgrade_1"))
+
+	print("--- 把整条链走完 ---")
+	_player.total_planted = 3
+	_player.total_watered = 1
+	_player.total_harvested = 1
+	_player.total_earned = 1
+	_ctl.goal_reached = true
+	MineRun.total_runs = 1
+	MineRun.total_boss = 1
+	_player.total_goods = 1
+	_player.total_processed = 1
+	Upgrades.levels = [1, 0, 0]
+	# 一次只推进一环，所以要多等几帧
+	await _step(60)
+	print("  INFO 走完之后：", Guide.count_done(), "/", Guide.total(), "，全部完成=", Guide.is_all_done())
+	_check("整条链都走完了", Guide.is_all_done())
+	_check("完成数等于总数", Guide.count_done() == Guide.total())
+	_check("全部完成时给出交代", Guide.current_text() == "全部完成！")
+	await _step(3)
+	print("  INFO ", hud2.goal_text())
+	_check("HUD 上显示全部完成", "全部完成" in hud2.goal_text())
+
+	print("--- 引导进度要能存档 ---")
+	var gd: Dictionary = Guide.to_save_data()
+	_check("存档里记了完成的环", (gd.get("done", []) as Array).size() == 10)
+	Guide.apply_save_data({})
+	_check("读空存档退回一环都没做", Guide.count_done() == 0)
+	Guide.apply_save_data(gd)
+	_check("读回来还是 10 环", Guide.count_done() == 10)
+	# 收尾：清干净，别影响别的节
+	Guide.apply_save_data({})
+
+	print("--- 种 / 浇 的生涯计数真的会加 ---")
+	_player.total_planted = 0
+	_player.total_watered = 0
+	_land.clear_all_plants()
+	await _step(2)
+	var tiles4 := _farm_tiles()
+	_move_to_tile(tiles4[0])
+	# 直接调农田那一层：这一节要验的是"种一株会不会让计数 +1"，
+	# 而不是控制器怎么按道具路由（那条路别的地方已经覆盖了）。
+	_player.active_item = Player.Item.SEED
+	_player.seed_type = 0
+	_player.seeds[0] = 5
+	var planted_ok: bool = _land.try_plant_at(tiles4[0])
+	await _step(3)
+	print("  INFO try_plant_at = ", planted_ok, "，total_planted = ", _player.total_planted)
+	_check("种下去了", planted_ok)
+	_check("种一株就 +1", _player.total_planted == 1)
+	_player.water_left = 10
+	var watered_ok: bool = _land.water_plant_at(tiles4[0])
+	await _step(3)
+	print("  INFO water_plant_at = ", watered_ok, "，total_watered = ", _player.total_watered)
+	_check("浇上了", watered_ok)
+	_check("浇一次就 +1", _player.total_watered == 1)
+	_land.clear_all_plants()
+
 	print("RESULT fail=", _fail)
 	get_tree().quit()

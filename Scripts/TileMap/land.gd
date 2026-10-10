@@ -73,6 +73,7 @@ func try_plant_at(tile_pos: Vector2i) -> bool:
 	var type_id: int = player.seed_type
 	player.take_seed()
 	spawn_plant(tile_pos, type_id)
+	player.register_plant()
 	Sfx.play("plant")
 	print("[农场] 种下 ", CropData.name_of(type_id), "，还剩 ", player.seed_count(type_id), " 粒")
 	return true
@@ -126,7 +127,11 @@ func water_plant_at(tile_pos: Vector2i) -> bool:
 	var p: BasePlant = plants.get(tile_pos)
 	if p == null or not is_instance_valid(p):
 		return false
-	return p.water()
+	var ok: bool = p.water()
+	# 浇上了就记一笔（干旱天第一遍也算"浇过了"，它确实是一次浇水动作）
+	if ok:
+		player.register_water()
+	return ok
 
 func try_harvest_at(tile_pos: Vector2i) -> bool:
 	var plant: BasePlant = plants.get(tile_pos)

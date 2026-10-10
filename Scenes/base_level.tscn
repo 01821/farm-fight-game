@@ -1061,12 +1061,24 @@ color = Color(0, 0, 0, 0.72)
 [node name="Toast" type="Label" parent="HUD"]
 visible = false
 offset_left = 90.0
-offset_top = 266.0
+offset_top = 240.0
 offset_right = 310.0
-offset_bottom = 294.0
+offset_bottom = 268.0
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 vertical_alignment = 1
+
+; 当前目标：常驻显示，一环接一环的那一环。
+; 放在**底部**而不是顶部 —— 顶部四条已经是"状态"了，目标单独一条放底下，
+; 玩家一眼能分清"我现在怎么样"和"我该干什么"。
+[node name="GoalLabel" type="Label" parent="HUD"]
+offset_left = 8.0
+offset_top = 280.0
+offset_right = 392.0
+offset_bottom = 298.0
+theme_override_colors/font_color = Color(1, 0.93, 0.62, 1)
+theme_override_font_sizes/font_size = 12
+text = "目标：—"
 
 ; 统计面板（Y 键开关）。整块预建，脚本只切可见性和文本。
 [node name="StatBackdrop" type="ColorRect" parent="HUD"]
