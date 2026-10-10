@@ -42,6 +42,10 @@ const SPAWN := "S"
 
 ## 掉落物场景，在场景文件里预先接好
 @export var pickup_scene: PackedScene
+## 关底被拆掉时掉几份金币 / 几块矿石
+@export var boss_coin_drops: int = 5
+@export var boss_coin_value: int = 8
+@export var boss_ore_drops: int = 3
 
 @onready var terrain: TileMapLayer = $Terrain
 @onready var player: MinePlayer = $MinePlayer
@@ -63,14 +67,22 @@ func _hook_player() -> void:
 	if not player.died.is_connected(_on_player_died):
 		player.died.connect(_on_player_died)
 
-## 每只怪死掉都掉一份金币，并计入这趟的战绩
+## 每只怪死掉都掉一份金币，并计入这趟的战绩。
+## Boss 不在 "mine_enemy" 分组里（它是另一类东西），所以要单独 hook 一次。
 func _hook_enemies() -> void:
 	for n in get_tree().get_nodes_in_group("mine_enemy"):
 		var e := n as MineEnemy
 		if e != null and not e.died.is_connected(_on_enemy_died):
 			e.died.connect(_on_enemy_died)
+	for n in get_tree().get_nodes_in_group("mine_boss"):
+		var b := n as MineEnemy
+		if b != null and not b.died.is_connected(_on_enemy_died):
+			b.died.connect(_on_enemy_died)
 
 func _on_enemy_died(enemy: MineEnemy) -> void:
+	if enemy.is_boss():
+		_on_boss_died(enemy)
+		return
 	MineRun.add_kill()
 	if pickup_scene == null or not is_instance_valid(enemy):
 		return
@@ -80,6 +92,23 @@ func _on_enemy_died(enemy: MineEnemy) -> void:
 	if randf() < 0.25:
 		_spawn_drop(MinePickup.Kind.ORE, -1, from)
 		print("[矿洞] ", enemy.display_name(), " 还掉了一块矿石！")
+
+## 关底被拆：掉一大笔，并记进这趟战绩
+func _on_boss_died(boss: MineEnemy) -> void:
+	MineRun.add_kill()
+	MineRun.boss_down = true
+	print("[矿洞] ", boss.display_name(), " 被拆了！矿洞清净了")
+	if pickup_scene == null or not is_instance_valid(boss):
+		return
+	var origin: Vector2 = boss.global_position + Vector2(0, -20)
+	# 撒开一点，不然五份金币会叠成一份的样子
+	for i in range(boss_coin_drops):
+		var off: float = float(i) - float(boss_coin_drops - 1) * 0.5
+		_spawn_drop(MinePickup.Kind.COIN, boss_coin_value, origin + Vector2(off * 18.0, 0))
+	for i in range(boss_ore_drops):
+		var off2: float = float(i) - float(boss_ore_drops - 1) * 0.5
+		_spawn_drop(MinePickup.Kind.ORE, -1, origin + Vector2(off2 * 24.0, 8.0))
+	Sfx.play("goal")
 
 func _spawn_drop(kind: int, value: int, at: Vector2) -> MinePickup:
 	if pickup_scene == null:

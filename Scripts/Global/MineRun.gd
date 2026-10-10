@@ -22,6 +22,8 @@ var active: bool = false
 var gold: int = 0
 ## 这一趟挖到的矿石块数（价值已经算进 gold 里了，这个只是给结算显示用）
 var ore: int = 0
+## 这一趟有没有把关底 Boss 拆掉
+var boss_down: bool = false
 ## 这一趟赶跑的怪
 var kills: int = 0
 var torch_left: float = 0.0
@@ -35,6 +37,7 @@ func start_run() -> void:
 	active = true
 	gold = 0
 	ore = 0
+	boss_down = false
 	kills = 0
 	torch_left = TORCH_TIME
 	run_started.emit()
@@ -62,9 +65,10 @@ func finish(success: bool) -> void:
 	if not active:
 		return
 	active = false
-	_pending = {"success": success, "gold": gold, "kills": kills, "ore": ore}
+	_pending = {"success": success, "gold": gold, "kills": kills, "ore": ore, "boss_down": boss_down}
 	print("[矿洞] 出洞 - ", "带回" if success else "丢掉",
-		"这趟收获：", gold, " 金 / ", ore, " 块矿石，赶跑 ", kills, " 只")
+		"这趟收获：", gold, " 金 / ", ore, " 块矿石，赶跑 ", kills, " 只",
+		"，关底", "已拆" if boss_down else "没拆")
 	run_finished.emit(success, gold, kills)
 	if scene_switch_enabled:
 		get_tree().change_scene_to_file(FARM_SCENE)

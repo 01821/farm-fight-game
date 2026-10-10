@@ -113,6 +113,35 @@ theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 
+; Boss 血条：只有 Boss 醒了才显示。名字在上，条在下。
+[node name="BossLabel" type="Label" parent="."]
+visible = false
+offset_left = 60.0
+offset_top = 68.0
+offset_right = 340.0
+offset_bottom = 86.0
+theme_override_colors/font_color = Color(1, 0.85, 0.7, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="BossBackdrop" type="ColorRect" parent="."]
+visible = false
+offset_left = 60.0
+offset_top = 88.0
+offset_right = 340.0
+offset_bottom = 102.0
+color = Color(0.1, 0.06, 0.06, 0.85)
+
+[node name="BossFill" type="ColorRect" parent="."]
+visible = false
+offset_left = 62.0
+offset_top = 90.0
+offset_right = 338.0
+offset_bottom = 100.0
+color = Color(0.85, 0.25, 0.2, 1)
+
 ; P 键技能表：整块都是预建的，脚本只切可见性和文本
 [node name="SkillListBackdrop" type="ColorRect" parent="."]
 visible = false

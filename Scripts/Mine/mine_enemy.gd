@@ -55,14 +55,25 @@ var _dead: bool = false
 var _state: int = State.PATROL
 ## 显示用的名字。**不要用 node.name** —— 运行时给节点改名会让 get_node("EnemyA") 之
 ## 类的路径查找失效（踩过一次：敌人全部找不到了，还以为是分组没注册）。
+## 挨打僵直时间的倍率。Boss 会覆盖成很小的值 ——
+## 不然玩家可以把它连击锁死，Boss 战变成"按住 F 不放"。
+var stun_scale: float = 1.0
 var _title: String = "怪"
 var _player: MinePlayer
 
 @onready var sprite: Sprite2D = $Sprite2D
 
 func _ready() -> void:
-	add_to_group("mine_enemy")
+	# ⚠️ Boss **不进 "mine_enemy" 分组**。它虽然继承了这个脚本，但概念上不是小怪 ——
+	#    混进去会把所有"数小怪"的地方都算错（踩过一次，四个不相关的测试一起红）。
+	#    Boss 自己加进 "mine_boss"，关卡会分别 hook 两个分组。
+	if not is_boss():
+		add_to_group("mine_enemy")
 	_apply_kind()
+
+## 子类覆盖成 true（Boss）
+func is_boss() -> bool:
+	return false
 
 func _apply_kind() -> void:
 	var k: int = clampi(kind, 0, KINDS.size() - 1)
@@ -109,17 +120,21 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_player = _resolve_player()
-	var chasing: bool = _player != null and _can_see(_player)
-	_state = State.CHASE if chasing else State.PATROL
-
-	if chasing:
-		_do_chase(delta)
-	else:
-		_do_patrol()
+	_think(delta)
 
 	move_and_slide()
 	if absf(velocity.x) > 0.01:
 		sprite.flip_h = velocity.x < 0.0
+
+## 「想什么、怎么动」都在这里。**子类覆盖这个方法就能换行为**（Boss 就是这么做的），
+## 闪白 / 硬直 / 击退 / 受伤结算这些公共部分不用重写。
+func _think(delta: float) -> void:
+	var chasing: bool = _player != null and _can_see(_player)
+	_state = State.CHASE if chasing else State.PATROL
+	if chasing:
+		_do_chase(delta)
+	else:
+		_do_patrol()
 
 ## 玩家只在矿洞场景里存在，缓存一下别每帧找
 func _resolve_player() -> MinePlayer:
@@ -190,7 +205,7 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF, knock: float = KNOCKB
 		return false
 	hp = maxi(0, hp - amount)
 	_flash = FLASH_TIME
-	_stun = HIT_STUN
+	_stun = HIT_STUN * stun_scale
 	if from.is_finite():
 		var away: Vector2 = global_position - from
 		if away.length() > 0.01:

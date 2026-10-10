@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Mine/mine_level.gd" id="1_lvl"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/mine_player.tscn" id="2_player"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Mine/mine_hud.tscn" id="5_hud"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/mine_pickup.tscn" id="6_pickup"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/mine_chest.tscn" id="7_chest"]
+[ext_resource type="PackedScene" path="res://Scenes/Mine/mine_boss.tscn" id="8_boss"]
 
 ; ⚠️ 两个必须对齐的东西，错一个都不会报错、只会手感不对：
 ;    1) TileSet.tile_size **必须**和 texture_region_size 一样是 18×18。
@@ -61,6 +62,11 @@ position = Vector2(150, 189)
 [node name="Chest2" parent="." instance=ExtResource("7_chest")]
 position = Vector2(252, 153)
 ore_count = 2
+
+; 关底 Boss。放在矿洞最右边（地图 48 格宽 = 864px），地面顶面 y=198。
+; 平时待机不动，玩家走进 170px 才会醒 —— 给玩家一个"我走到深处了"的时刻。
+[node name="Boss" parent="." instance=ExtResource("8_boss")]
+position = Vector2(790, 198)
 
 [node name="MinePlayer" parent="." instance=ExtResource("2_player")]
 position = Vector2(40, 40)

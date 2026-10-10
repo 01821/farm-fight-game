@@ -22,7 +22,13 @@ const COLOR_NO_ENERGY := Color(0.75, 0.5, 0.5)
 @onready var skill_list_backdrop: ColorRect = $SkillListBackdrop
 @onready var skill_list_title: Label = $SkillListTitle
 @onready var skill_list_body: Label = $SkillListBody
+@onready var boss_label: Label = $BossLabel
+@onready var boss_backdrop: ColorRect = $BossBackdrop
+@onready var boss_fill: ColorRect = $BossFill
 @onready var hint: Label = $HintLabel
+
+## Boss 血条满格时的宽度（和场景里的初始宽度一致）
+const BOSS_BAR_WIDTH: float = 276.0
 
 var _player: MinePlayer
 
@@ -59,6 +65,19 @@ func _process(_delta: float) -> void:
 	_refresh_skills()
 	_refresh_status()
 	_refresh_skill_list()
+	_refresh_boss()
+
+## Boss 血条：Boss 醒了才出现，拆掉之后自动消失
+func _refresh_boss() -> void:
+	var boss := get_tree().get_first_node_in_group("mine_boss") as MineBoss
+	var show: bool = boss != null and is_instance_valid(boss) and boss.is_engaged()
+	boss_label.visible = show
+	boss_backdrop.visible = show
+	boss_fill.visible = show
+	if not show:
+		return
+	boss_label.text = "%s   %d / %d" % [boss.display_name(), boss.hp, boss.max_hp]
+	boss_fill.size.x = BOSS_BAR_WIDTH * boss.hp_ratio()
 
 ## 按当前血量刷新每一颗心：满 / 半 / 空。**一颗心 = 2 点血。**
 func _refresh_hearts(hp: int, max_hp: int) -> void:
