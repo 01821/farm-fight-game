@@ -61,6 +61,7 @@ func save_game() -> bool:
 		"achievements": achievements.to_save_data() if achievements != null else {},
 		"progression": Progression.to_save_data(),
 		"mine": MineRun.to_save_data(),
+		"upgrades": Upgrades.to_save_data(),
 	}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f == null:
@@ -99,6 +100,7 @@ func load_game() -> bool:
 	if achievements != null:
 		achievements.apply_save_data(data.get("achievements", {}))
 	MineRun.apply_save_data(data.get("mine", {}))
+	Upgrades.apply_save_data(data.get("upgrades", {}))
 	print("[存档] 已读取（第 ", cycle.day, " 天，", player.money, " 金）")
 	return true
 

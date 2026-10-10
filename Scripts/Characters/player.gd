@@ -16,9 +16,9 @@ const MAX_HP: int = 5
 const ATTACK_COOLDOWN: float = 0.35
 const SLASH_TIME: float = 0.12
 
-enum Item { SEED, WATER_CAN, BASKET, SWORD }
+enum Item { SEED, WATER_CAN, BASKET, SWORD, TOOLBOX }
 
-const ITEM_NAMES: Array[String] = ["种子袋", "水壶", "收获篮", "长剑"]
+const ITEM_NAMES: Array[String] = ["种子袋", "水壶", "收获篮", "长剑", "工具箱"]
 
 signal died
 

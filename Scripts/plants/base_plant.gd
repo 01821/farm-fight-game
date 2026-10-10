@@ -26,7 +26,8 @@ var water_passes: int = 0
 
 func _ready() -> void:
 	timer.one_shot = true
-	timer.wait_time = growTime
+	# 肥料升级让作物长得更快：把成长时间按倍率缩短
+	timer.wait_time = growTime * Upgrades.grow_time_multiplier()
 	updateSprite()
 	_updateWetMark()
 

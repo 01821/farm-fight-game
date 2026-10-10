@@ -89,6 +89,48 @@ func sell_crops(player: Player) -> bool:
 	print("[商店] 卖出 ", detail, "，+", total, " 金", bonus, "，共 ", player.money)
 	return true
 
+## 买土地升级。没有 UI，所以规则定成：**买得起的最便宜的那个**。
+## 这样玩家拿着工具箱按 F 一定是"买了点东西"，不会站着发呆。
+func buy_upgrade(player: Player) -> bool:
+	var best: int = -1
+	var best_price: int = 1 << 30
+	for id in range(Upgrades.INFO.size()):
+		if Upgrades.is_maxed(id):
+			continue
+		var p: int = Upgrades.next_price(id)
+		if p < best_price and player.money >= p:
+			best = id
+			best_price = p
+	if best < 0:
+		# 说清楚到底为什么买不了，别让玩家猜
+		var all_maxed := true
+		for id in range(Upgrades.INFO.size()):
+			if not Upgrades.is_maxed(id):
+				all_maxed = false
+		if all_maxed:
+			print("[商店] 三项土地升级都满级了")
+		else:
+			print("[商店] 钱不够（最便宜的升级要 ", cheapest_price(), " 金，只有 ", player.money, "）")
+		return false
+	player.money -= best_price
+	if not Upgrades.buy(best, player.money + best_price):
+		player.money += best_price     # 万一没买成，把钱退回去
+		return false
+	Sfx.play("buy")
+	print("[商店] 买了 ", Upgrades.name_of(best), "（-", best_price, "），余额 ", player.money)
+	return true
+
+## 还没满级的升级里最便宜的那个要多少钱；全满级返回 -1
+func cheapest_price() -> int:
+	var best: int = -1
+	for id in range(Upgrades.INFO.size()):
+		if Upgrades.is_maxed(id):
+			continue
+		var p: int = Upgrades.next_price(id)
+		if best < 0 or p < best:
+			best = p
+	return best
+
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		_player_inside += 1

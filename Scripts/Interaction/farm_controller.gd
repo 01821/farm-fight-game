@@ -75,6 +75,8 @@ func use_held_item() -> bool:
 				return market.buy_seed(player)
 			Player.Item.BASKET:
 				return market.sell_crops(player)
+			Player.Item.TOOLBOX:
+				return market.buy_upgrade(player)
 			_:
 				print("[商店] 拿着 ", player.item_name(), " 没法交易")
 				return false

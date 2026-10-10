@@ -21,6 +21,7 @@ Level="*uid://cp5eslpyr05f4"
 Sfx="*res://Scenes/global/sfx.tscn"
 Progression="*res://Scripts/Global/Progression.gd"
 MineRun="*res://Scripts/Global/MineRun.gd"
+Upgrades="*res://Scripts/Global/Upgrades.gd"
 
 [display]
 

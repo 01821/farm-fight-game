@@ -9,6 +9,20 @@ var _animal: Node2D          # base_animal（脚本没有 class_name）
 var _player: Player
 var _market: Market
 var _cycle: DayCycle
+var _land: FarmLand
+var _weather: Weather
+var _ctl: FarmController
+
+func _farm_tiles() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for c in _land.get_used_cells():
+		if _land.is_farmland(c):
+			out.append(c)
+	return out
+
+## 把玩家挪到某一格农田上（种地 / 浇水都要先站过去）
+func _move_to_tile(tile: Vector2i) -> void:
+	_player.global_position = _land.to_global(_land.map_to_local(tile))
 
 func _check(label: String, ok: bool) -> void:
 	if ok:
@@ -36,6 +50,9 @@ func _ready() -> void:
 	_player = _level.get_node("level/Player") as Player
 	_market = _level.get_node("level/Static/Market") as Market
 	_cycle = _level.get_node("DayCycle") as DayCycle
+	_land = _level.get_node("Land") as FarmLand
+	_weather = _level.get_node_or_null("Weather") as Weather
+	_ctl = _level.get_node("FarmController") as FarmController
 
 	print("--- 配置 ---")
 	_check("农场里有动物", _animal != null)
@@ -220,6 +237,128 @@ func _ready() -> void:
 	_player.apply_save_data(pd2)
 	_check("读档读回成品价值", _player.processed_value == 33)
 	_check("读档读回累计加工值", _player.total_processed == 77)
+
+	print("--- 土地升级：洒水器 / 肥料 / 温室 ---")
+	_check("有三项土地升级", Upgrades.INFO.size() == 3)
+	_check("升级名对得上",
+		Upgrades.name_of(0) == "洒水器" and Upgrades.name_of(1) == "肥料" and Upgrades.name_of(2) == "温室")
+
+	# 从零开始，免得被前面的状态干扰
+	Upgrades.levels = [0, 0, 0]
+	_check("没买时洒水器浇 0 株", Upgrades.sprinkler_count() == 0)
+	_check("没买时生长倍率是 1", is_equal_approx(Upgrades.grow_time_multiplier(), 1.0))
+	_check("没买时收获没有加成", Upgrades.greenhouse_bonus() == 0)
+	_check("没买时 any 是 false", not Upgrades.has_any())
+
+	print("  INFO 洒水器 ", Upgrades.next_price(0), " 金 / 肥料 ", Upgrades.next_price(1),
+		" 金 / 温室 ", Upgrades.next_price(2), " 金")
+
+	print("--- 买升级：钱不够买不了 ---")
+	_check("钱不够时买不了", not Upgrades.buy(0, 0))
+	_check("没买成就不该升级", Upgrades.level_of(0) == 0)
+	_check("钱不够时 can_afford 是 false", not Upgrades.can_afford(0, 0))
+
+	print("--- 洒水器：每天早上自动浇水 ---")
+	var p0: int = Upgrades.next_price(0)
+	_check("钱够就能买", Upgrades.buy(0, p0))
+	_check("等级变成 1", Upgrades.level_of(0) == 1)
+	print("  INFO 一级洒水器：", Upgrades.effect_text(0))
+	_check("一级洒水器浇 2 株", Upgrades.sprinkler_count() == 2)
+
+	# 真的种几株干的，过一夜看它浇没浇
+	_land.clear_all_plants()
+	await _step(2)
+	_weather.set_rainy(false)
+	var tiles3 := _farm_tiles()
+	var planted: int = 0
+	for t in tiles3:
+		if planted >= 3:
+			break
+		_move_to_tile(t)
+		_ctl.use_held_item()
+		await _step(1)
+		if _land.plants.has(t):
+			planted += 1
+	print("  INFO 种下了 ", planted, " 株，都是干的")
+	_check("种下了足够多的作物", planted >= 3)
+	var dry_before: int = 0
+	for t in _land.plants.keys():
+		if not (_land.plants[t] as BasePlant).is_watered:
+			dry_before += 1
+	_check("种下去的时候都是干的", dry_before >= 3)
+
+	_cycle.day_started.emit(_cycle.day + 1)
+	await _step(4)
+	var wet_now: int = 0
+	for t in _land.plants.keys():
+		if (_land.plants[t] as BasePlant).is_watered:
+			wet_now += 1
+	print("  INFO 过了一夜：湿了 ", wet_now, " 株（洒水器配额 ", Upgrades.sprinkler_count(), "）")
+	_check("★ 洒水器早上自动浇了水", wet_now > 0)
+	_check("浇的数量不超过配额", wet_now <= Upgrades.sprinkler_count())
+	_check("没有把所有作物都浇了（否则就不叫配额了）", wet_now < dry_before)
+
+	print("--- 肥料：作物长得更快 ---")
+	var base_mult: float = Upgrades.grow_time_multiplier()
+	Upgrades.buy(1, Upgrades.next_price(1))
+	var fast_mult: float = Upgrades.grow_time_multiplier()
+	print("  INFO 肥料一级后生长倍率 ", base_mult, " → ", fast_mult)
+	_check("买了肥料倍率变小", fast_mult < base_mult)
+	_check("倍率在合理区间", fast_mult > 0.2 and fast_mult < 1.0)
+	# 真的作用在新种的作物上
+	_land.clear_all_plants()
+	await _step(2)
+	_move_to_tile(tiles3[0])
+	_ctl.use_held_item()
+	await _step(2)
+	var fp: BasePlant = _land.plants.get(tiles3[0])
+	if fp != null:
+		print("  INFO 新种的作物生长时间 ", snappedf(fp.timer.wait_time, 0.01),
+			"（原始 ", fp.growTime, "）")
+		_check("新作物确实享受了肥料加成", fp.timer.wait_time < fp.growTime)
+		_check("缩短比例和倍率一致",
+			is_equal_approx(fp.timer.wait_time, fp.growTime * fast_mult))
+
+	print("--- 温室：每次收获多拿 ---")
+	Upgrades.buy(2, Upgrades.next_price(2))
+	_check("温室一级", Upgrades.greenhouse_bonus() == 1)
+	_check("现在至少买过东西了", Upgrades.has_any())
+
+	print("--- 满级就买不了了 ---")
+	Upgrades.levels = [Upgrades.MAX_LEVEL, Upgrades.MAX_LEVEL, Upgrades.MAX_LEVEL]
+	_check("满级后 is_maxed", Upgrades.is_maxed(0) and Upgrades.is_maxed(2))
+	_check("满级后没有下一级价格", Upgrades.next_price(0) == -1)
+	_check("满级后买不了", not Upgrades.buy(0, 999999))
+
+	print("--- 升级要能存档 ---")
+	Upgrades.levels = [2, 1, 3]
+	var ud: Dictionary = Upgrades.to_save_data()
+	Upgrades.levels = [0, 0, 0]
+	Upgrades.apply_save_data(ud)
+	print("  INFO 读档后的等级 ", Upgrades.levels)
+	_check("读档读回三项等级", Upgrades.levels == [2, 1, 3])
+	Upgrades.apply_save_data({})
+	_check("存档里没这一段时退回全 0", Upgrades.levels == [0, 0, 0])
+
+	print("--- 拿着工具箱在商店买升级 ---")
+	Upgrades.levels = [0, 0, 0]
+	_player.money = 9999
+	_player.active_item = Player.Item.TOOLBOX
+	_player.global_position = _market.global_position
+	await _step(4)
+	_check("商店认得工具箱这个道具", _player.item_name() == "工具箱")
+	var buy_ok: bool = _market.buy_upgrade(_player)
+	await _step(2)
+	print("  INFO 买升级：", buy_ok, "，等级 ", Upgrades.levels, "，余额 ", _player.money)
+	_check("拿着工具箱按 F 能买升级", buy_ok)
+	_check("确实升了一级", Upgrades.has_any())
+	_check("钱被扣了", _player.money < 9999)
+
+	var money_before: int = _player.money
+	_player.money = 0
+	_check("没钱的时候买不了", not _market.buy_upgrade(_player))
+	_check("没买成不扣钱（本来就是 0）", _player.money == 0)
+	_player.money = money_before
 
 	print("RESULT fail=", _fail)
 	get_tree().quit()

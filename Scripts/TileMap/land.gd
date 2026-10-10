@@ -11,9 +11,45 @@ const BASE_PLANT = preload("uid://orgflfd17epj")
 
 ## 格子坐标 -> 作物实例
 var plants: Dictionary = {}
+## 有没有接上 DayCycle 的信号
+var _cycle_hooked: bool = false
 
 func _ready() -> void:
 	add_to_group("farm_land")
+	_hook_cycle()
+
+## 洒水器升级：每天早上自动浇几株。
+## DayCycle 可能排在后面，_ready 时分组还没注册，所以允许之后再补查。
+func _hook_cycle() -> void:
+	if _cycle_hooked:
+		return
+	var cycle := get_tree().get_first_node_in_group("day_cycle") as DayCycle
+	if cycle == null:
+		return
+	cycle.day_started.connect(_on_day_started)
+	_cycle_hooked = true
+
+func _process(_delta: float) -> void:
+	_hook_cycle()
+
+func _on_day_started(_day: int) -> void:
+	water_by_sprinkler()
+
+## 洒水器自动浇水。返回浇了几株。
+## 它浇的是"当前还缺水的那些"，所以和玩家手动浇水不会互相浪费。
+func water_by_sprinkler() -> int:
+	var quota: int = Upgrades.sprinkler_count()
+	if quota <= 0:
+		return 0
+	var done: int = 0
+	for tile in plants.keys():
+		if done >= quota:
+			break
+		if water_plant_at(tile):
+			done += 1
+	if done > 0:
+		print("[升级] 洒水器早上自动浇了 ", done, " 株")
+	return done
 
 func get_player_tile() -> Vector2i:
 	return local_to_map(to_local(player.global_position))
@@ -109,6 +145,12 @@ func try_harvest_at(tile_pos: Vector2i) -> bool:
 	if randf() < Progression.harvest_bonus_chance():
 		player.add_harvest(type_id)
 		got = 2
+	# 温室升级：每级稳多收 1 个（**不看运气**，所以和上面那条专精叠加得起来）
+	var green: int = Upgrades.greenhouse_bonus()
+	if green > 0:
+		for i in range(green):
+			player.add_harvest(type_id)
+		got += green
 	Progression.add_xp(Progression.Skill.FARM, 1)
 	Sfx.play("harvest")
 	print("[农场] 收获 ", CropData.name_of(type_id), " x", got, "！篮子里共 ", player.basket_total(), " 个")
