@@ -138,6 +138,55 @@ func _ready() -> void:
 	_check("朝左也能砍中", hit2 == 1)
 	_check("打到的是旁边那只", other.hp == other.max_hp - 1)
 
+	print("--- 手感：屏幕震动与打击粒子 ---")
+	# ⚠️ 先挪到没人的地方，把前面战斗留下的震动清干净。
+	#    第一次写这节时没做这一步：敌人在旁边反复造成接触伤害，一抖再抖，
+	#    于是"抖完之后不再震"永远不成立 —— **测试自己的前置状态没收拾干净**。
+	_player.global_position = Vector2(70, 198)
+	_player.velocity = Vector2.ZERO
+	await _step(40)
+	_check("主角身上有摄像机（震动要用）", _player.camera != null)
+	_check("有打击火星粒子节点", _player.hit_sparks != null)
+	_check("有落地扬尘粒子节点", _player.dust_puff != null)
+	_check("平时不震", not _player.is_shaking())
+	_check("平时摄像机没有偏移", _player.camera.offset == Vector2.ZERO)
+
+	# 抖一下，观察摄像机偏移。**不能只断言"某一帧不为零"** ——
+	# 偏移是随机数，理论上可能正好摇到 0，那会变成偶发失败。
+	_player.shake(6.0, 0.3)
+	_check("抖动开始了", _player.is_shaking())
+	var max_off: float = 0.0
+	for i in range(10):
+		await _step(1)
+		max_off = maxf(max_off, _player.camera.offset.length())
+	print("  INFO 抖动期间摄像机最大偏移 ", snappedf(max_off, 0.01), " px")
+	_check("摄像机真的在晃", max_off > 0.5)
+	_check("幅度不超过设定值", max_off <= 6.0 * 1.5)
+
+	# 等它抖完，偏移必须归零（不归零的话画面会永久歪着）
+	await _step(30)
+	_check("抖完之后不再震", not _player.is_shaking())
+	_check("抖完之后摄像机归零", _player.camera.offset == Vector2.ZERO)
+
+	# 打中敌人应该自动触发火星 + 抖动。用尖刺球（血厚，不会被一刀秒掉）
+	var target := _level.get_node_or_null("EnemySpike") as MineEnemy
+	_check("有活的靶子可以做命中测试", target != null and is_instance_valid(target))
+	if target != null and is_instance_valid(target):
+		target.hp = 99
+		target.global_position = _player.global_position + Vector2(14, -2)
+		target.velocity = Vector2.ZERO
+		await _step(4)
+		_player.facing = 1
+		await _step(1)
+		var hit_n: int = _player.attack()
+		await _step(2)
+		print("  INFO 挥了一刀，命中 ", hit_n, "；火星在 ", _player.hit_sparks.global_position.round())
+		_check("打中了", hit_n >= 1)
+		_check("挥中会自动抖屏", _player.is_shaking())
+		_check("火星挪到了命中点附近",
+			_player.hit_sparks.global_position.distance_to(_player.global_position) < 40.0)
+		await _step(30)
+
 	_release_all()
 	print("RESULT fail=", _fail)
 	get_tree().quit()

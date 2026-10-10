@@ -43,6 +43,20 @@ const HURT_KNOCKBACK_Y: float = -150.0
 const DASH_DAMAGE: int = 1
 const DASH_KNOCK: float = 90.0
 
+## --- 手感：屏幕震动 ---
+## 幅度用"像素"、时间用"秒"。**取最强的那一次，不累加** ——
+## 连续的小震动叠成一个大抖会让人头晕。
+const SHAKE_HIT: float = 2.6
+const SHAKE_HIT_TIME: float = 0.12
+const SHAKE_HURT: float = 4.2
+const SHAKE_HURT_TIME: float = 0.26
+const SHAKE_SKILL: float = 5.0
+const SHAKE_SKILL_TIME: float = 0.2
+const SHAKE_DEATH: float = 7.0
+const SHAKE_DEATH_TIME: float = 0.5
+## 落地扬尘的最小下落速度（轻轻跳一下不该扬尘）
+const LAND_DUST_SPEED: float = 150.0
+
 ## 消耗品：三种药，分别绑在 1 / 2 / 3 上。
 ## 和技能是**两套分开的资源**（参考游戏里技能是 H U I O、物品是 1/2/3）：
 ## 技能吃能量，药吃瓶数。
@@ -81,12 +95,24 @@ var _dash_speed: float = 0.0
 var _dash_hit: Dictionary = {}
 var _reach: float = 24.0
 
+## 屏幕震动：剩余时间 / 总时长 / 幅度
+var _shake_left: float = 0.0
+var _shake_len: float = 0.001
+var _shake_amp: float = 0.0
+## 上一帧是否站在地上（用来判断"刚落地"）
+var _was_on_floor: bool = true
+## 上一帧的下落速度（决定落地时扬不扬尘）
+var _last_fall_speed: float = 0.0
+
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var slash: Polygon2D = $Slash
 ## 判定框是**预建的 Area2D**，一直开着当查询区域用 ——
 ## 这样 get_overlapping_bodies() 拿到的就是当前这一帧的重叠结果。
 @onready var attack_box: Area2D = $AttackBox
 @onready var _attack_shape_node: CollisionShape2D = $AttackBox/CollisionShape2D
+@onready var camera: Camera2D = $Camera2D
+@onready var hit_sparks: CPUParticles2D = $HitSparks
+@onready var dust_puff: CPUParticles2D = $DustPuff
 
 ## 技能的判定范围是**每次都不一样**的（重斩是长条、旋风斩是方块），
 ## 而 Area2D 的重叠结果要等一个物理帧才刷新，技能判定不能等。
@@ -175,6 +201,8 @@ func _physics_process(delta: float) -> void:
 		velocity.y *= JUMP_CUT
 
 	move_and_slide()
+	_last_fall_speed = velocity.y
+	_check_landing()
 
 	if absf(velocity.x) > 1.0:
 		sprite.flip_h = velocity.x < 0.0
@@ -183,9 +211,54 @@ func _tick_timers(delta: float) -> void:
 	_attack_cd = maxf(0.0, _attack_cd - delta)
 	_update_invuln(delta)
 	_update_slash(delta)
+	_update_shake(delta)
 	energy = minf(energy + MineCombatData.ENERGY_REGEN * delta, float(MineCombatData.ENERGY_MAX))
 	for i in range(skill_cd.size()):
 		skill_cd[i] = maxf(0.0, skill_cd[i] - delta)
+
+# --- 手感：屏幕震动与打击粒子 ---
+
+## 抖一下屏幕。**取更强的那一次，不累加** —— 连续小震动叠成大抖会让人晕。
+func shake(amp: float, dur: float) -> void:
+	if amp >= _shake_amp or _shake_left <= 0.0:
+		_shake_amp = amp
+		_shake_len = maxf(dur, 0.001)
+	_shake_left = maxf(_shake_left, dur)
+
+func is_shaking() -> bool:
+	return _shake_left > 0.0
+
+## 震动的幅度随时间线性衰减到 0，抖完把摄像机偏移归零
+func _update_shake(delta: float) -> void:
+	if _shake_left <= 0.0:
+		if camera.offset != Vector2.ZERO:
+			camera.offset = Vector2.ZERO
+		_shake_amp = 0.0
+		return
+	_shake_left = maxf(0.0, _shake_left - delta)
+	var k: float = _shake_amp * (_shake_left / _shake_len)
+	camera.offset = Vector2(randf_range(-k, k), randf_range(-k, k))
+
+## 在指定位置炸一簇火星。用的是**预建的粒子节点**，只改位置然后重播。
+func spawn_hit_sparks(at: Vector2) -> void:
+	if hit_sparks == null:
+		return
+	hit_sparks.global_position = at
+	hit_sparks.restart()
+
+## 脚底扬尘
+func spawn_land_dust() -> void:
+	if dust_puff == null:
+		return
+	dust_puff.global_position = global_position + Vector2(0, -2)
+	dust_puff.restart()
+
+## 从空中落到地面时扬一次尘。轻轻跳一下（下落速度不够）不扬。
+func _check_landing() -> void:
+	var on_floor: bool = is_on_floor()
+	if on_floor and not _was_on_floor and _last_fall_speed > LAND_DUST_SPEED:
+		spawn_land_dust()
+	_was_on_floor = on_floor
 
 # --- 武器 ---
 
@@ -233,6 +306,9 @@ func attack() -> int:
 
 	if hit > 0:
 		Sfx.play("hit")
+		# 打中的手感：火星 + 抖屏
+		spawn_hit_sparks(global_position + Vector2(float(facing) * _reach * 0.6, BOX_CENTER_Y))
+		shake(SHAKE_HIT, SHAKE_HIT_TIME)
 	else:
 		print("[矿洞] 挥空了")
 	attacked.emit(hit)
@@ -320,6 +396,7 @@ func cast_skill(id: int) -> bool:
 			_skill_dash(s)
 		"heal":
 			_skill_heal(s)
+	shake(SHAKE_SKILL, SHAKE_SKILL_TIME)
 	print("[矿洞] 放技能 ", MineCombatData.skill_name(id), "（剩能量 ", int(energy), "）")
 	skill_used.emit(id)
 	return true
@@ -418,6 +495,7 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
 	hp = maxi(0, hp - amount)
 	_invuln = INVULN_TIME
 	Sfx.play("hurt")
+	shake(SHAKE_HURT, SHAKE_HURT_TIME)
 	if from.is_finite():
 		var dx: float = signf(global_position.x - from.x)
 		if absf(dx) < 0.01:
@@ -426,6 +504,7 @@ func take_damage(amount: int, from: Vector2 = Vector2.INF) -> bool:
 	print("[矿洞] 玩家掉血 ", amount, "，剩 ", hp, "/", MAX_HP)
 	damaged.emit(amount)
 	if hp <= 0:
+		shake(SHAKE_DEATH, SHAKE_DEATH_TIME)
 		print("[矿洞] 玩家倒下了")
 		died.emit()
 	return true
