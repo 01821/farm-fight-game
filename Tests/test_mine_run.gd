@@ -339,6 +339,85 @@ func _ready() -> void:
 	_level._apply_hazard_depth()
 	_player.hp = MinePlayer.MAX_HP
 
+	print("--- 回农场结算（端到端，含自动读档）---")
+	# ★ 这条专门盯一个藏了很久的真 bug：
+	#   SaveSystem 是**第一帧 _process** 才自动读档的，而 `_ready` 比它早。
+	#   结算写在 `_ready` 里的话，发给玩家的钱会**当场被读档覆盖回去** ——
+	#   之前只验 `consume_result()` 的内容是抓不到的，**必须验玩家钱包**。
+	MineRun.scene_switch_enabled = false
+
+	# 先造一份存档：玩家身上 100 金
+	var seed_farm := (load("res://Scenes/base_level.tscn") as PackedScene).instantiate()
+	add_child(seed_farm)
+	var seed_save := seed_farm.get_node("SaveSystem") as SaveSystem
+	seed_save.auto_load = false
+	seed_save.auto_save_on_dawn = false
+	await _step(2)
+	var seed_player := seed_farm.get_node("level/Player") as Player
+	seed_player.money = 100
+	var wrote: bool = seed_save.save_game()
+	_check("先造好一份 100 金的存档", wrote)
+	seed_farm.queue_free()
+	await _step(2)
+
+	# 摆出一趟"成功带回 50 金 + 拆了关底"的结果
+	MineRun.last_boss_day = -1
+	MineRun.start_run()
+	MineRun.entry_day = 3
+	MineRun.gold = 50
+	MineRun.ore = 2
+	MineRun.kills = 4
+	MineRun.boss_down = true
+	MineRun.finish(true)
+	_check("结果已挂起，等着回农场结算", MineRun.has_result())
+
+	# 载入农场：自动读档 + 结算
+	var farm2 := (load("res://Scenes/base_level.tscn") as PackedScene).instantiate()
+	add_child(farm2)
+	var save2 := farm2.get_node("SaveSystem") as SaveSystem
+	save2.auto_save_on_dawn = false      # 但 **auto_load 保持开着** —— 这条测的就是它
+	# 自动读档在第 1 帧、结算在第 2~3 帧，多等几帧让两边都跑完
+	await _step(8)
+	var p2 := farm2.get_node("level/Player") as Player
+	print("  INFO 钱包最终 = ", p2.money, "（存档 100 + 带回 50 + 首通 ", MineRun.DAILY_FIRST_GOLD, " = ",
+		100 + 50 + MineRun.DAILY_FIRST_GOLD, "）")
+	_check("存档里的钱被读回来了（不是从 0 开始）", p2.money >= 100)
+	_check("★ 带回的金币真的进了钱包（没被读档覆盖）", p2.money >= 150)
+	_check("每日首通的额外奖励也到账了", p2.money == 100 + 50 + MineRun.DAILY_FIRST_GOLD)
+	_check("结算只做一次", not MineRun.has_result())
+
+	print("--- 每日首通：一天只算一次 ---")
+	print("  INFO 拆关底那天 = ", MineRun.last_boss_day, "，首通奖励 = ", MineRun.DAILY_FIRST_GOLD)
+	_check("领过之后记下了是哪天", MineRun.last_boss_day == 3)
+	_check("同一天再拆不算首通", not MineRun.can_claim_daily())
+	_check("同一天再领领不到", MineRun.claim_daily() == 0)
+
+	# 换一天再下矿
+	MineRun.start_run()
+	MineRun.entry_day = 3
+	MineRun.boss_down = true
+	_check("同一天（第 3 天）不算首通", not MineRun.can_claim_daily())
+	MineRun.entry_day = 4
+	_check("到了第 4 天又是首通了", MineRun.can_claim_daily())
+	_check("新的一天能领到", MineRun.claim_daily() == MineRun.DAILY_FIRST_GOLD)
+	_check("领完记的是第 4 天", MineRun.last_boss_day == 4)
+	MineRun.entry_day = 5
+	MineRun.boss_down = false
+	_check("没拆关底就没有首通", not MineRun.can_claim_daily())
+	MineRun.boss_down = true
+
+	print("--- 首通状态要能存活档 ---")
+	MineRun.last_boss_day = 7
+	var mine_save: Dictionary = MineRun.to_save_data()
+	_check("存档里有 last_boss_day", int(mine_save.get("last_boss_day", -1)) == 7)
+	MineRun.last_boss_day = -1
+	MineRun.apply_save_data(mine_save)
+	_check("读档能把首通日期读回来", MineRun.last_boss_day == 7)
+	MineRun.apply_save_data({})
+	_check("存档里没有这个字段时退回 -1", MineRun.last_boss_day == -1)
+
+	MineRun.last_boss_day = -1
+
 	print("--- 农场那边的矿洞口 ---")
 	# 前面开着的那趟要先收掉，否则"不该误启动一趟"这条会被自己前面的状态干扰
 	MineRun.active = false

@@ -18,9 +18,20 @@ func _ready() -> void:
 	area.body_entered.connect(_on_body_entered)
 	area.body_exited.connect(_on_body_exited)
 	_save = get_tree().get_first_node_in_group("save_system") as SaveSystem
+	_deferred_settle()
+
+## ⚠️ 结算必须等**自动读档之后**再做。
+##
+## 踩过的坑（藏了很久的真 bug）：SaveSystem 是在**第一帧 `_process`** 里自动读档的，
+## 而 `_ready` 比它早。在 `_ready` 里给玩家发钱，紧接着 `apply_save_data()` 就按存档
+## 把钱包覆盖回去了 —— **"带回金币"在真实游戏里其实一直是不生效的**。
+## 之前的测试只验了 `consume_result()` 的内容，没验玩家钱包，所以一直没抓到。
+func _deferred_settle() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
 	_settle_previous_run()
 
-## 从矿洞回到农场的这一帧：把这趟的收获结算给玩家。
+## 从矿洞回到农场后：把这趟的收获结算给玩家。
 ## 存档是在**进洞之前**拍的，所以失败时什么都不用做 —— 收获自然就没了。
 func _settle_previous_run() -> void:
 	if not MineRun.has_result():
@@ -31,11 +42,18 @@ func _settle_previous_run() -> void:
 	var gold: int = int(r.get("gold", 0))
 	var kills: int = int(r.get("kills", 0))
 	var ore: int = int(r.get("ore", 0))
-	if success and gold > 0 and player != null:
-		player.earn(gold)
-		Sfx.play("coin")
+	var before: int = player.money if player != null else 0
+	if success and player != null:
+		if gold > 0:
+			player.earn(gold)
+			Sfx.play("coin")
+		# 每日首通：今天第一次拆掉关底，额外再给一笔
+		var bonus: int = MineRun.claim_daily()
+		if bonus > 0:
+			player.earn(bonus)
 	print("[矿洞] 结算：", "带回 " if success else "丢掉 ", gold,
-		" 金 / ", ore, " 块矿石（赶跑 ", kills, " 只），现在有 ", player.money if player != null else 0)
+		" 金 / ", ore, " 块矿石（赶跑 ", kills, " 只），钱包 ", before, " → ",
+		player.money if player != null else 0)
 
 func is_player_inside() -> bool:
 	return _player_inside
@@ -62,6 +80,10 @@ func enter_mine() -> bool:
 	if _save != null:
 		_save.save_game()
 		print("[矿洞] 进洞前已存档（切场景靠它恢复农场）")
+	# 记下"今天是第几天" —— 回来结算时要靠它判断这趟算不算每日首通
+	var cycle := get_tree().get_first_node_in_group("day_cycle") as DayCycle
 	MineRun.start_run()
+	MineRun.entry_day = cycle.day if cycle != null else 0
+	print("[矿洞] 第 ", MineRun.entry_day, " 天下矿")
 	get_tree().change_scene_to_file(mine_scene)
 	return true

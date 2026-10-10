@@ -37,6 +37,12 @@ var ore: int = 0
 var boss_down: bool = false
 ## 这一趟赶跑的怪
 var kills: int = 0
+## 「最近一次拆掉关底」是第几天。**跨存档持久化**，用来判断今天是不是首通。
+var last_boss_day: int = -1
+## 进洞那天是第几天（由矿洞口在进洞时记下）
+var entry_day: int = 0
+## 每日首通关底的额外奖励
+const DAILY_FIRST_GOLD: int = 30
 var torch_left: float = 0.0
 ## 测试用的开关：headless 测试里不能真的切场景（一切后面就没法继续跑断言了）。
 ## 关掉之后 finish() 只改状态、不切场景。
@@ -113,3 +119,25 @@ func consume_result() -> Dictionary:
 
 func has_result() -> bool:
 	return not _pending.is_empty()
+
+## 今天还没拆过关底吗
+func can_claim_daily() -> bool:
+	return boss_down and entry_day > last_boss_day
+
+## 领走今天的首通奖励，返回领了多少（已经领过就返回 0）
+func claim_daily() -> int:
+	if not can_claim_daily():
+		return 0
+	last_boss_day = entry_day
+	print("[矿洞] 今日首通关底，额外 +", DAILY_FIRST_GOLD, " 金")
+	return DAILY_FIRST_GOLD
+
+# --- 存档 ---
+# ⚠️ 只存**跨天要记住的**东西（最近一次拆关底是哪天）。
+#    这一趟的 gold / depth / boss_down 都是临时状态，切场景就该没了，不该进存档。
+
+func to_save_data() -> Dictionary:
+	return {"last_boss_day": last_boss_day}
+
+func apply_save_data(d: Dictionary) -> void:
+	last_boss_day = int(d.get("last_boss_day", -1))
