@@ -260,6 +260,67 @@ func _ready() -> void:
 			_check("两层在屏幕上的滑动距离确实不同", absf(far_moved - near_moved) > 5.0)
 			_check("远层滑得更多（因为它跟着世界走得少）", far_moved > near_moved)
 
+	print("--- 矿车 ---")
+	var cart := _level.get_node_or_null("Cart") as MineCart
+	_check("关卡里有矿车", cart != null)
+	if cart != null:
+		_check("矿车在地形层（玩家才会把它当落脚点）", (cart.collision_layer & 1) != 0)
+
+		# 先让它自己跑一会儿，确认真的在动
+		await _step(3)
+		var x0: float = cart.global_position.x
+		await _step(30)
+		var x1: float = cart.global_position.x
+		print("  INFO 矿车 0.5 秒里从 ", snappedf(x0, 0.1), " 走到 ", snappedf(x1, 0.1))
+		_check("矿车自己在跑", absf(x1 - x0) > 20.0)
+
+		# 跑到头会不会掉头：连跑足够久，观察它有没有往回走过
+		var min_x: float = cart.global_position.x
+		var max_x: float = cart.global_position.x
+		var reversed_seen := false
+		# ⚠️ 要拿**上一帧**的位置来算方向。第一版写成
+		#    `var x = cart.global_position.x` 再 `cart.global_position.x - x`，
+		#    减出来永远是 0，方向判不出来 —— 于是"掉头"这条永远失败。
+		var prev_x: float = cart.global_position.x
+		var last_dir: float = 0.0
+		for i in range(400):
+			await get_tree().physics_frame
+			var x: float = cart.global_position.x
+			min_x = minf(min_x, x)
+			max_x = maxf(max_x, x)
+			var d: float = signf(x - prev_x)
+			if d != 0.0:
+				if last_dir != 0.0 and d != last_dir:
+					reversed_seen = true
+				last_dir = d
+			prev_x = x
+		print("  INFO 矿车活动范围 x ", snappedf(min_x, 0.1), " ~ ", snappedf(max_x, 0.1),
+			"（设定单程 ", cart.travel, "）")
+		_check("会在两端掉头", reversed_seen)
+		_check("活动范围大概是设定的单程距离", absf((max_x - min_x) - cart.travel) < 40.0)
+
+		# ★ 最关键的一条：站上去要**被带着走**。
+		#   只验"车在动"是不够的 —— 车动、人不动，那就是个摆设。
+		cart.global_position = Vector2(470, 191)
+		await _step(2)
+		_player.global_position = Vector2(cart.global_position.x, cart.global_position.y - 9)
+		_player.velocity = Vector2.ZERO
+		await _step(6)
+		var rider_ok: bool = cart.has_rider()
+		var px0: float = _player.global_position.x
+		var cx0: float = cart.global_position.x
+		# 全程不按任何方向键，只靠车带
+		_release_all()
+		await _step(40)
+		var px1: float = _player.global_position.x
+		var cx1: float = cart.global_position.x
+		print("  INFO 车上有人=", rider_ok, "；车走了 ", snappedf(cx1 - cx0, 0.1),
+			" px，人也走了 ", snappedf(px1 - px0, 0.1), " px")
+		_check("站上去会被认成乘客", rider_ok)
+		_check("玩家被矿车带着走了（没按任何键）", absf(px1 - px0) > 20.0)
+		_check("人和车走的是同一个方向", signf(px1 - px0) == signf(cx1 - cx0))
+		_check("人没被落下（位移量接近）", absf(absf(px1 - px0) - absf(cx1 - cx0)) < 15.0)
+
 	_release_all()
 	print("RESULT fail=", _fail)
 	get_tree().quit()

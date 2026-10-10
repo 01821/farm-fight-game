@@ -1,0 +1,36 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Mine/mine_cart.gd" id="1_cart"]
+[ext_resource type="Texture2D" path="res://Assets/kenney_pixel-platformer/tilemap-characters_packed.png" id="2_chars"]
+
+; 碰撞盒 30×14，顶面正好落在 y=184（地面顶面是 198，所以车"坐"在地面上）。
+; collision_layer = 1 → 和地形同层，玩家的 collision_mask 会把它当"地面"。
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cart"]
+size = Vector2(30, 14)
+
+; 乘客检测区：比车身略高一点，站上来就能认到
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rider"]
+size = Vector2(30, 26)
+
+[node name="MineCart" type="AnimatableBody2D"]
+collision_layer = 1
+collision_mask = 0
+sync_to_physics = true
+script = ExtResource("1_cart")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -3)
+texture = ExtResource("2_chars")
+region_enabled = true
+region_rect = Rect2(0, 48, 24, 24)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_cart")
+
+[node name="RiderArea" type="Area2D" parent="."]
+position = Vector2(0, -8)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RiderArea"]
+shape = SubResource("RectangleShape2D_rider")
