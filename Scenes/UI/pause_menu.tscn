@@ -1,0 +1,70 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/pause_menu.gd" id="1_pause"]
+
+; 暂停菜单。整块预建，脚本只切可见性和文本。
+; 农场和矿洞各自 instance 一份（两个场景都挂上）。
+[node name="PauseMenu" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1_pause")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+visible = false
+offset_right = 400.0
+offset_bottom = 300.0
+color = Color(0.03, 0.03, 0.05, 0.82)
+
+[node name="Title" type="Label" parent="."]
+visible = false
+offset_left = 90.0
+offset_top = 74.0
+offset_right = 310.0
+offset_bottom = 96.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "已暂停"
+
+[node name="Option1" type="Label" parent="."]
+visible = false
+offset_left = 120.0
+offset_top = 112.0
+offset_right = 280.0
+offset_bottom = 130.0
+theme_override_font_sizes/font_size = 12
+text = "[1] 继续游戏"
+
+[node name="Option2" type="Label" parent="."]
+visible = false
+offset_left = 120.0
+offset_top = 136.0
+offset_right = 280.0
+offset_bottom = 154.0
+theme_override_font_sizes/font_size = 12
+text = "[2] 存档"
+
+[node name="Option3" type="Label" parent="."]
+visible = false
+offset_left = 120.0
+offset_top = 160.0
+offset_right = 280.0
+offset_bottom = 178.0
+theme_override_font_sizes/font_size = 12
+text = "[3] 读档"
+
+[node name="Option4" type="Label" parent="."]
+visible = false
+offset_left = 120.0
+offset_top = 184.0
+offset_right = 280.0
+offset_bottom = 202.0
+theme_override_font_sizes/font_size = 12
+text = "[4] 回到标题"
+
+[node name="Status" type="Label" parent="."]
+visible = false
+offset_left = 80.0
+offset_top = 218.0
+offset_right = 320.0
+offset_bottom = 240.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1

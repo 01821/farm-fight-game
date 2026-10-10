@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Mine/descend_point.tscn" id="10_desc"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/spike_trap.tscn" id="11_spike"]
 [ext_resource type="PackedScene" path="res://Scenes/Mine/falling_rock.tscn" id="12_rock"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/pause_menu.tscn" id="13_pause"]
 
 ; ⚠️ 两个必须对齐的东西，错一个都不会报错、只会手感不对：
 ;    1) TileSet.tile_size **必须**和 texture_region_size 一样是 18×18。
@@ -150,3 +151,5 @@ travel = 220.0
 position = Vector2(40, 40)
 
 [node name="MineHud" parent="." instance=ExtResource("5_hud")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("13_pause")]
